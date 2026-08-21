@@ -1,0 +1,1522 @@
+[
+{
+  "model": "auth.user",
+  "fields": {
+    "password": "pbkdf2_sha256$1200000$P17vkuqrJjWfhno8f9epyr$6N2h2scxvSoISztxDyzr5idSFwSOyYVO7aKlqBB3Uvk=",
+    "last_login": "2026-08-19T04:42:00.729Z",
+    "is_superuser": true,
+    "username": "admin",
+    "first_name": "",
+    "last_name": "",
+    "email": "admin@gmail.com",
+    "is_staff": true,
+    "is_active": true,
+    "date_joined": "2026-08-17T05:48:37.497Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "3b519axnq1tubcc9uebo011sr1clkau3",
+  "fields": {
+    "session_data": ".eJxVjDsOwjAQBe_iGll4Hf8o6TmDtWuvcQA5UpxUiLuTSCmgfTPz3iLiutS4dp7jmMVFKHH63QjTk9sO8gPbfZJpass8ktwVedAub1Pm1_Vw_w4q9rrVnItLAwFz0kxgjCnWhTParEOAUBRqBvCcDW9AkwY_KKfAIJVi0YvPFwBoOEM:1wwEhl:sHQL66BIZvgPATJ3N0dYzv3VK_EacisLJBJqBlzN21o",
+    "expire_date": "2026-09-01T07:57:53.427Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "4kzfd4tf5c11e6tlgj9h5ayi5m9auaer",
+  "fields": {
+    "session_data": ".eJxVjEEOwiAQAP_C2RAWCkWP3n0DWZZFqgaS0p6MfzckPeh1ZjJvEXDfStg7r2FJ4iJAnH5ZRHpyHSI9sN6bpFa3dYlyJPKwXd5a4tf1aP8GBXsZWyY2jAYjnMl6Q8DoVGY7gbfAzqaIM6KOWpFO2qusIZOZiZyZInnx-QIFHDif:1wvtJP:NkFPpZ5P00OBjlcGQLinH-mVKkgqcnKXSszCzMfFTl0",
+    "expire_date": "2026-08-31T09:07:19.734Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "edsrav94hyk7qbqo9z1s7n0aoek3j8rw",
+  "fields": {
+    "session_data": ".eJxVjDsOwjAQBe_iGll4Hf8o6TmDtWuvcQA5UpxUiLuTSCmgfTPz3iLiutS4dp7jmMVFKHH63QjTk9sO8gPbfZJpass8ktwVedAub1Pm1_Vw_w4q9rrVnItLAwFz0kxgjCnWhTParEOAUBRqBvCcDW9AkwY_KKfAIJVi0YvPFwBoOEM:1wvtUv:nhU6cObXp3tR56piYURl2W4Z4AcNz4AKVemhKdIb46I",
+    "expire_date": "2026-08-31T09:19:13.743Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "f7d7szl7ffo499sypp4rlylbj71tipfy",
+  "fields": {
+    "session_data": ".eJxVjEEOwiAQAP_C2RAWCkWP3n0DWZZFqgaS0p6MfzckPeh1ZjJvEXDfStg7r2FJ4iJAnH5ZRHpyHSI9sN6bpFa3dYlyJPKwXd5a4tf1aP8GBXsZWyY2jAYjnMl6Q8DoVGY7gbfAzqaIM6KOWpFO2qusIZOZiZyZInnx-QIFHDif:1wvscr:crP02gJMqf59XLdd7Os1pNdDLRsMUulzq9ZV9rXiS7Y",
+    "expire_date": "2026-08-31T08:23:21.215Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "gn5f4vqxs8jjhzzyuytryldr36k5hht7",
+  "fields": {
+    "session_data": ".eJxVjEEOwiAQAP_C2RAWCkWP3n0DWZZFqgaS0p6MfzckPeh1ZjJvEXDfStg7r2FJ4iJAnH5ZRHpyHSI9sN6bpFa3dYlyJPKwXd5a4tf1aP8GBXsZWyY2jAYjnMl6Q8DoVGY7gbfAzqaIM6KOWpFO2qusIZOZiZyZInnx-QIFHDif:1wwY7k:DFRyUuhR58O7wK7AZ_MgoJN8ZRY9_-dR2FybjJWkmBs",
+    "expire_date": "2026-09-02T04:42:00.757Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "hsl1i9zmfsne0dw3c431aulx81258z03",
+  "fields": {
+    "session_data": ".eJxVjEEOwiAQAP_C2RAWCkWP3n0DWZZFqgaS0p6MfzckPeh1ZjJvEXDfStg7r2FJ4iJAnH5ZRHpyHSI9sN6bpFa3dYlyJPKwXd5a4tf1aP8GBXsZWyY2jAYjnMl6Q8DoVGY7gbfAzqaIM6KOWpFO2qusIZOZiZyZInnx-QIFHDif:1wvqDc:g6M9LRjVf6EXxf_xvyAz3hEgDcibZ6agVKruXEBiYg8",
+    "expire_date": "2026-08-31T05:49:08.822Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "j256mis9vw66yhgyduxb2cnllk0y42gq",
+  "fields": {
+    "session_data": ".eJxVjDsOwjAQBe_iGll4Hf8o6TmDtWuvcQA5UpxUiLuTSCmgfTPz3iLiutS4dp7jmMVFKHH63QjTk9sO8gPbfZJpass8ktwVedAub1Pm1_Vw_w4q9rrVnItLAwFz0kxgjCnWhTParEOAUBRqBvCcDW9AkwY_KKfAIJVi0YvPFwBoOEM:1wvthX:7MwhpQjKUOc-E5GNFZw8N7lWOdVJGkhWHY_ljPRVj78",
+    "expire_date": "2026-08-31T09:32:15.225Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "otjkvfiu6gm8vyebyali7djouanpfgrs",
+  "fields": {
+    "session_data": ".eJxVjEEOwiAQAP_C2RAWCkWP3n0DWZZFqgaS0p6MfzckPeh1ZjJvEXDfStg7r2FJ4iJAnH5ZRHpyHSI9sN6bpFa3dYlyJPKwXd5a4tf1aP8GBXsZWyY2jAYjnMl6Q8DoVGY7gbfAzqaIM6KOWpFO2qusIZOZiZyZInnx-QIFHDif:1wvscy:sEejbJ4xfA-iofmBiy_lcWmXGJAXB8HWws1tPLT9zPM",
+    "expire_date": "2026-08-31T08:23:28.119Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "qatbv3l67e8v8i7w6xrzq5axjw6e5veq",
+  "fields": {
+    "session_data": ".eJxVjEEOwiAQAP_C2RAWCkWP3n0DWZZFqgaS0p6MfzckPeh1ZjJvEXDfStg7r2FJ4iJAnH5ZRHpyHSI9sN6bpFa3dYlyJPKwXd5a4tf1aP8GBXsZWyY2jAYjnMl6Q8DoVGY7gbfAzqaIM6KOWpFO2qusIZOZiZyZInnx-QIFHDif:1wvsd5:0M-c6xkjx0x_mJRT6olUyK1iXGh7jbMoOi1CVmZzFuw",
+    "expire_date": "2026-08-31T08:23:35.135Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "re0jlgo6676mhwnabml4vwo0wrfimmag",
+  "fields": {
+    "session_data": ".eJxVjEEOwiAQAP_C2RAWCkWP3n0DWZZFqgaS0p6MfzckPeh1ZjJvEXDfStg7r2FJ4iJAnH5ZRHpyHSI9sN6bpFa3dYlyJPKwXd5a4tf1aP8GBXsZWyY2jAYjnMl6Q8DoVGY7gbfAzqaIM6KOWpFO2qusIZOZiZyZInnx-QIFHDif:1wvqO8:23ZFsAd6-R-esj2KxS-vKqXnRYIwPFuUIo7H9_y1s_E",
+    "expire_date": "2026-08-31T06:00:00.658Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "z19i2osii5c2lt4ugvqbjt277aw4afv1",
+  "fields": {
+    "session_data": ".eJxVjDsOwjAQBe_iGll4Hf8o6TmDtWuvcQA5UpxUiLuTSCmgfTPz3iLiutS4dp7jmMVFKHH63QjTk9sO8gPbfZJpass8ktwVedAub1Pm1_Vw_w4q9rrVnItLAwFz0kxgjCnWhTParEOAUBRqBvCcDW9AkwY_KKfAIJVi0YvPFwBoOEM:1wvtUz:zEBoe44APiI4orp0wf8RITI4YZIMdj47znXRcESax8k",
+    "expire_date": "2026-08-31T09:19:17.924Z"
+  }
+},
+{
+  "model": "sessions.session",
+  "pk": "zos80ar20xh17riagjojvw0372jbzpzv",
+  "fields": {
+    "session_data": ".eJxVjEEOwiAQAP_C2RAWCkWP3n0DWZZFqgaS0p6MfzckPeh1ZjJvEXDfStg7r2FJ4iJAnH5ZRHpyHSI9sN6bpFa3dYlyJPKwXd5a4tf1aP8GBXsZWyY2jAYjnMl6Q8DoVGY7gbfAzqaIM6KOWpFO2qusIZOZiZyZInnx-QIFHDif:1wvsfi:0zkQe4QqjWCzr9skMsmizmD74SziGtAnHYOl1IwWqW0",
+    "expire_date": "2026-08-31T08:26:18.734Z"
+  }
+},
+{
+  "model": "accounts.admin",
+  "pk": 1,
+  "fields": {
+    "name": "Divya",
+    "email": "divya@billiontags.com",
+    "password": "pbkdf2_sha256$1200000$wFqQPuQIqZwJF3hOAoimef$deXUbsSCfWvLVwpwClGcCzbCiWXvN8VD5dc8cKvX8Yo=",
+    "created_at": "2026-08-17T05:49:35.855Z"
+  }
+},
+{
+  "model": "accounts.admin",
+  "pk": 2,
+  "fields": {
+    "name": "Praveen Kumar",
+    "email": "praveen@billiontags.com",
+    "password": "pbkdf2_sha256$1200000$3wgnJQiL0VHqiFGhH6d9oZ$/PUUoPTLkTiryGs9hvV/8QHoFD6hyFBws/ie521O/hg=",
+    "created_at": "2026-08-18T12:51:59.219Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 1,
+  "fields": {
+    "name": "Uma",
+    "email": "uma@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$hcHjaSznRfttThHMZC4hVI$l0PC1523bJV9de1OzV978N9OqhyWowE6CNXpLOxCU6c=",
+    "employee_id": "TAG253",
+    "department": "Tech",
+    "role": "Developer",
+    "is_active": true,
+    "created_at": "2026-08-17T05:50:25.846Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 2,
+  "fields": {
+    "name": "Charulatha",
+    "email": "charulatha@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$LKyoBEHwSbgT5RrpXfNKO1$UQQl/Kb806Xc3d7a2qzj5gZBtHyP/5Hl7ce1N/J5S1M=",
+    "employee_id": "TAG252",
+    "department": "Tech",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T07:47:48.201Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 3,
+  "fields": {
+    "name": "Vinoth Kumar",
+    "email": "vinoth@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$DzoBKKWUJA3op9A2wMv5oQ$lKncNzPvGyrR4yAYco3k/Q84aUsNChiUMSOJscAGVr8=",
+    "employee_id": "TAG251",
+    "department": "Design",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:22:49.526Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 4,
+  "fields": {
+    "name": "Jai Kumar",
+    "email": "jaikumar@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$YCd2ae8oFLEhvF7zdDxrbc$iQsLqbpLcm7lo/1BnugXwBTGM0cMKW9YXwmDdCb0nhE=",
+    "employee_id": "TAG257",
+    "department": "Sales",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:30:45.980Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 5,
+  "fields": {
+    "name": "Yuvan Sam",
+    "email": "yuvan@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$Z7U1fistwJJYQgWf5Nmu5X$BYYnIZIoryi8ObEND2SXSDHwKDBeafd8nZpSrqSbdPI=",
+    "employee_id": "TAG256",
+    "department": "HR",
+    "role": "HR",
+    "is_active": true,
+    "created_at": "2026-08-17T09:31:08.425Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 6,
+  "fields": {
+    "name": "Jayeshlin",
+    "email": "jayashlin@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$UT5gynCEFelHiUoc2QGvAU$jpDMmPEAiHMZGOnXoEFKHAzMNkD+JduGGl+0SssklJc=",
+    "employee_id": "TAG255",
+    "department": "HR",
+    "role": "HR",
+    "is_active": true,
+    "created_at": "2026-08-17T09:31:25.972Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 7,
+  "fields": {
+    "name": "Karthi Ram",
+    "email": "karthi@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$lblz7kgcmAChbGapoLHTL7$+8Ii/5ZqVZsuHsUgh7qv8aqE72760f9D/Kbubfe1iGk=",
+    "employee_id": "TAG254",
+    "department": "Tech",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:33:18.906Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 8,
+  "fields": {
+    "name": "Pradeep Kumar",
+    "email": "pradeep@billiontags.com",
+    "password": "pbkdf2_sha256$1200000$Ck5qEwtXE1GC1ckyN4qi8l$0VuymAlmSBC4+QsqkhjHitb5tq7hdu7r3yEwn4dkKfk=",
+    "employee_id": "TAG095",
+    "department": "Campaign",
+    "role": "TL",
+    "is_active": true,
+    "created_at": "2026-08-17T09:33:58.669Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 9,
+  "fields": {
+    "name": "Sathish Kumar",
+    "email": "sathish@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$xnPOd6svMPrWUl30XG7GCc$TrvkcQC7R0BHYyGZzqv/3VNkAQW004aDOwveMcMgms4=",
+    "employee_id": "CTAG012",
+    "department": "Sales",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:34:26.490Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 10,
+  "fields": {
+    "name": "Kannan",
+    "email": "kannan@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$qMHuuyMaEzhI7cL7PyGpTb$RYLolA9tumL4eOuHuSinub3wRWudmWaQK1C//ZoqT7o=",
+    "employee_id": "CTAG008",
+    "department": "Design",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:35:21.298Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 11,
+  "fields": {
+    "name": "Surya",
+    "email": "surya@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$EUTUWulWRQreBTYrEcX5NL$TJFh8CJXZhkSrt37Ca2G532ELyWM0Q4pKxCwIziVUwA=",
+    "employee_id": "TAG172",
+    "department": "Campaign",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:35:29.656Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 12,
+  "fields": {
+    "name": "Srivani Priyaa",
+    "email": "srivani@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$Tefgx2zwyWxznsFqGPDxsA$IiYSJ4YolIPVoatHLGG278D2e/BQG9xo1G3lD7okETw=",
+    "employee_id": "CTAG007",
+    "department": "Sales",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:36:24.900Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 13,
+  "fields": {
+    "name": "Keerthika",
+    "email": "keerthika@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$mPygvLaadsY1ab0jNQzgW9$hssEgWCXrvR7oHg1yrbNmVo4HbEWz55O4sWf59FGB/Q=",
+    "employee_id": "TAG176",
+    "department": "Sales",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:36:51.913Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 14,
+  "fields": {
+    "name": "Karthick Kannan S N",
+    "email": "karthick@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$PZmBCdWgPNmRDUZOH6rX1v$DYJwUKEs7ToFJenWO6AcfMVo+k7L4+apsznL3EfyYSA=",
+    "employee_id": "CTAG006",
+    "department": "Sales",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:37:20.147Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 15,
+  "fields": {
+    "name": "Sangeetha",
+    "email": "sangeetha@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$xPqplCLJArqtw2qIz4LXYv$GGWi7LAec0tq5Rb8oDN4weofiu93maUDzbjMj5b5sYE=",
+    "employee_id": "TAG177",
+    "department": "Sales",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:37:28.161Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 16,
+  "fields": {
+    "name": "Vishnukumar",
+    "email": "vishnu@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$t7r4cHBQxzVA4NVvr2EFZ5$ohiFXjSYGjie3SOTOB09jXhRdKFuSMqCCV2OnhmXuuU=",
+    "employee_id": "TAG250",
+    "department": "Design",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:37:44.134Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 17,
+  "fields": {
+    "name": "Yogesh",
+    "email": "yogesh@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$wQeFWSbE2BlfHPc1ayE7Uk$hX9asEtItrEOQIOY19MJ3I4IJuv/aGg6+HZqCn4W5HQ=",
+    "employee_id": "TAG190",
+    "department": "Campaign",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:38:00.882Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 18,
+  "fields": {
+    "name": "Nagarajan KC",
+    "email": "nagarajankc@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$kwfPUkBrsSYf6Wivq4dTI9$IDDZxj/GUlNWu1RbInjRNXiqm9DyvDisjom+cHwZmXQ=",
+    "employee_id": "TAG249",
+    "department": "Sales",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:38:10.367Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 19,
+  "fields": {
+    "name": "Arun",
+    "email": "arun@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$DHDjmiHY3Pgnrss37WkNRW$bxeb8iHInY5plof/UQnk1aE9nWvNkMWD/ghvzxwZq4A=",
+    "employee_id": "TAG248",
+    "department": "Tech",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:38:58.385Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 20,
+  "fields": {
+    "name": "Timo Jedidiah",
+    "email": "timo@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$LqhsKausJMp4FcrTxSEdtr$hLVNgh5lq6CaH0dcvopJ4uuPhjMhG6QzPROk6DRr+7k=",
+    "employee_id": "TAG205",
+    "department": "Design",
+    "role": "TL",
+    "is_active": true,
+    "created_at": "2026-08-17T09:39:24.694Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 21,
+  "fields": {
+    "name": "Mohammed Junead",
+    "email": "junead@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$RfILmboxY6LaWGmJxImITK$9Q1r3WWTRZ1hiblbRPWiF2I0XE1Q8cF4scNLbSc9qGk=",
+    "employee_id": "TAG247",
+    "department": "Design",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:39:42.677Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 22,
+  "fields": {
+    "name": "Revathi",
+    "email": "revathi@billiontags.com",
+    "password": "pbkdf2_sha256$1200000$B2JS26KZ9mmDAsQbblvl7c$ML1mc3HI1N6X3RGKrATKnMgCdjo7vFDaUFMvu52zbpU=",
+    "employee_id": "TAG064",
+    "department": "Sales",
+    "role": "TL",
+    "is_active": true,
+    "created_at": "2026-08-17T09:40:06.532Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 23,
+  "fields": {
+    "name": "Sivaharibalan S K",
+    "email": "siva@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$g5foHB9covvqtCmq2Tb9Vc$PBT6eCEwtscM95ef6mLh4CirJ8Hadl+bGXK0Q+crtPw=",
+    "employee_id": "CTAG005",
+    "department": "Sales",
+    "role": "TL",
+    "is_active": true,
+    "created_at": "2026-08-17T09:40:14.784Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 24,
+  "fields": {
+    "name": "Jafarin M",
+    "email": "jafarin@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$Vcd8x8R6ELp0GuMSsguKcw$tm2Q7GWUCeCEE/H4A9VwCJLNzzVV7OZZ3nQWJgs8B8U=",
+    "employee_id": "CTAG004",
+    "department": "Sales",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:40:41.004Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 25,
+  "fields": {
+    "name": "Sheejan John Martin",
+    "email": "sheejan@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$WYqHlmspXF4RFcAPSkod5M$LjBOGssXFNeDiWNV/rIxtQrH7lKUd+CT6iy0TY0XgRs=",
+    "employee_id": "TAG214",
+    "department": "Campaign",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:40:51.486Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 26,
+  "fields": {
+    "name": "Premkumar K",
+    "email": "prem@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$5JzM7T911MDKm5QS19JRgx$DTOvtHBn97GeeATDV98g1bKSgZeUDJCfB6meQU1BB30=",
+    "employee_id": "CTAG001",
+    "department": "Sales",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:41:04.401Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 27,
+  "fields": {
+    "name": "Karthikkumar G G",
+    "email": "karthik@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$UXM5kvuSss2rmWautqlx1q$g/F6n8w6tzU/qzP5trMZ0MNXMMew63nHa9wuIdQA0AM=",
+    "employee_id": "TAG244",
+    "department": "Sales",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:41:47.870Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 28,
+  "fields": {
+    "name": "Surya",
+    "email": "surya.b@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$sgk2LxyLy9fryzUxNcAJ91$6S5KFdG2sgYbuALWZ88OmE7Ax88TAGNr5dupAfwsq6g=",
+    "employee_id": "TAG226",
+    "department": "Sales",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:42:01.573Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 29,
+  "fields": {
+    "name": "Nagarajan",
+    "email": "nagarajan@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$zx01XPyQPD3uMdmV4pFeiT$G9gmQ4BqN5t3Vq7nxZS43SkI6N1K8UVwwSfRoIHSyzk=",
+    "employee_id": "TAG227",
+    "department": "Campaign",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:42:50.906Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 30,
+  "fields": {
+    "name": "Yogesh Kumar",
+    "email": "yogeshkumar@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$PJAmd7OmNtjyj6rqFjfkvm$fadTbdB4I2lE9HThNNuPGl8/fvD7DnlyUR+M8YiPuVw=",
+    "employee_id": "TAG242",
+    "department": "Tech",
+    "role": "TL",
+    "is_active": true,
+    "created_at": "2026-08-17T09:42:54.469Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 31,
+  "fields": {
+    "name": "Shiyam Sundar",
+    "email": "shyam@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$yzd67CdrBNQWw9bCu9YLhr$hAIb8bm9o4CxFVxbfW66tWPlWztvx5Orfu+/zELw/TE=",
+    "employee_id": "TAG241",
+    "department": "Sales",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:43:26.125Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 32,
+  "fields": {
+    "name": "Parthasarathi",
+    "email": "partha@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$mnmhRp26b8wfnsDtCQCwCj$VJNGPydj7VA/FJLyE5IofeT9Hr2sXrZz6NnYDOs/MjE=",
+    "employee_id": "TAG234",
+    "department": "Sales",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:45:01.202Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 33,
+  "fields": {
+    "name": "Prasanth",
+    "email": "prasanth@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$UY7Hj38HxFtfK1NMRwqbUX$/n5sEHAsb/wYEWZ3RNzFGPBhVoeWNLSAraMbgGgXXnw=",
+    "employee_id": "TAG229",
+    "department": "Campaign",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:45:12.905Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 34,
+  "fields": {
+    "name": "Ranjith",
+    "email": "ranjith@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$vo6AfkQ7si1DsgdwR44ZvQ$Zum1pE/tOwxcUVsgczjyuBKj4Jzx8QJOao1mtgBj3Gw=",
+    "employee_id": "TAG230",
+    "department": "Tech",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:46:00.618Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 35,
+  "fields": {
+    "name": "Udhayakumar S",
+    "email": "udhayakumar@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$5xx21Dhg8nnUB4T0z7vVGJ$xI+rsH1E+y2LIjOArnlEnZ011kKeIVLTOS7qU/I6sqk=",
+    "employee_id": "TAG233",
+    "department": "Sales",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:46:09.740Z"
+  }
+},
+{
+  "model": "accounts.employee",
+  "pk": 36,
+  "fields": {
+    "name": "Rameshbabu",
+    "email": "ramesh@billiontags.co",
+    "password": "pbkdf2_sha256$1200000$yXuVg7l3iGPZGbfMJatqDN$9bT53Rto9batZFi2jbVYbbpTkOqGIzSqUkbCFw48DK8=",
+    "employee_id": "TAG231",
+    "department": "Sales",
+    "role": "Executive",
+    "is_active": true,
+    "created_at": "2026-08-17T09:46:59.798Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 1,
+  "fields": {
+    "key": "da3c9ab7566e4f3faa15d656832af5c454acb9bd9280f0d8bd0fc769d14e651b",
+    "admin": 1,
+    "employee": null,
+    "created_at": "2026-08-17T05:58:33.193Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 2,
+  "fields": {
+    "key": "1e229fb6243c8c40902a0fb0f53e249caf36dd866e50dfd65d58c8c3efc380ee",
+    "admin": 1,
+    "employee": null,
+    "created_at": "2026-08-17T05:59:27.109Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 3,
+  "fields": {
+    "key": "50b4f1ace70cfcade1c42338d38626265b00dea400305c48e8947077c78460e4",
+    "admin": 1,
+    "employee": null,
+    "created_at": "2026-08-17T07:46:56.636Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 4,
+  "fields": {
+    "key": "41cf00a3d096651ce0e0348fc20db8ec71a8515e5afb23bb93624fb2322e81cc",
+    "admin": 1,
+    "employee": null,
+    "created_at": "2026-08-17T09:21:26.793Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 5,
+  "fields": {
+    "key": "30126100abe2f0f74e3fdef11ab8d8e33dadebbc75d567cca2d005e1d85830a9",
+    "admin": 1,
+    "employee": null,
+    "created_at": "2026-08-17T09:26:49.905Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 6,
+  "fields": {
+    "key": "02adc8233644c412bda09976fa247b818eb9fceaf2317cfd15d397f62fe191bb",
+    "admin": 1,
+    "employee": null,
+    "created_at": "2026-08-17T09:52:54.601Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 7,
+  "fields": {
+    "key": "89e21545757f0e53c491ac3f53d4ad19b5e370cd5e162bf1eb674521898dc93e",
+    "admin": 1,
+    "employee": null,
+    "created_at": "2026-08-17T12:57:52.200Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 8,
+  "fields": {
+    "key": "4b05190632abbbcb854c1c6112cb07ac5c839e6d8bccbbe33093dd1053288aef",
+    "admin": null,
+    "employee": 2,
+    "created_at": "2026-08-18T04:43:11.964Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 9,
+  "fields": {
+    "key": "47e450b6044622c3b5c057cad9aaa6f0c701b04da71a5ad511f0d3fb0e88e65b",
+    "admin": 1,
+    "employee": null,
+    "created_at": "2026-08-18T04:43:51.035Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 10,
+  "fields": {
+    "key": "a41b55a572e98a9e4c91f540a014f0ba0522ff1702321afa2638492180d33845",
+    "admin": 1,
+    "employee": null,
+    "created_at": "2026-08-18T06:41:07.149Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 11,
+  "fields": {
+    "key": "0cb8eba14317fdc064d7a7f632626e8865262fe0b992196873887792d45fa9f0",
+    "admin": 1,
+    "employee": null,
+    "created_at": "2026-08-18T06:45:39.339Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 12,
+  "fields": {
+    "key": "c6ffcebd7866e3d934f8d6e653561473a4896ad044e43dcc4576fe5ee48e963f",
+    "admin": 1,
+    "employee": null,
+    "created_at": "2026-08-18T11:13:36.986Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 13,
+  "fields": {
+    "key": "a5055e38dfbce2143b69999ceca4d0fddac22f6b1fa4e34b17ac631e0de53613",
+    "admin": 1,
+    "employee": null,
+    "created_at": "2026-08-18T12:47:19.892Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 14,
+  "fields": {
+    "key": "a2b0b226fd52e1cbdc432c71e5608e972862c9b626a0e77932812c360d353bcf",
+    "admin": 2,
+    "employee": null,
+    "created_at": "2026-08-18T12:52:44.699Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 15,
+  "fields": {
+    "key": "779dd73730df14764090eae6dc33612dc8e984b0f42eeae8b702dd63ff3d3337",
+    "admin": 1,
+    "employee": null,
+    "created_at": "2026-08-18T12:55:34.472Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 16,
+  "fields": {
+    "key": "4ba0246afc0f16324ed956d34cc64cd127f3d4968080c01b2382de0e98bca853",
+    "admin": null,
+    "employee": 22,
+    "created_at": "2026-08-18T12:58:28.687Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 17,
+  "fields": {
+    "key": "4883fa93f06d8fe6ef92df2727c631ddf43febae6148f600a9ddbebeab233cc0",
+    "admin": null,
+    "employee": 20,
+    "created_at": "2026-08-18T12:58:52.062Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 18,
+  "fields": {
+    "key": "0b2fd8d6a8a102dcbb23e25cbafbcf787bbcded19b696a55924cc86fcaefd19b",
+    "admin": null,
+    "employee": 22,
+    "created_at": "2026-08-18T13:00:05.533Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 19,
+  "fields": {
+    "key": "f31419127700b3c46ef398dafd2d90476159fd1d4c25b63c50e1dc3b2d2a574f",
+    "admin": null,
+    "employee": 20,
+    "created_at": "2026-08-18T13:01:34.693Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 20,
+  "fields": {
+    "key": "455c4d05ce82c58302da31c6ff01b3f2e1ce6334727463bce9bd4e4fd770267d",
+    "admin": 2,
+    "employee": null,
+    "created_at": "2026-08-18T13:03:10.928Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 21,
+  "fields": {
+    "key": "6dfd941cfb3dd71c8421340ea38d67387f9aab01ef332319fedcdeeb087fb328",
+    "admin": null,
+    "employee": 20,
+    "created_at": "2026-08-18T13:03:20.888Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 22,
+  "fields": {
+    "key": "22ff20ec9fd92f7b53a4a4a51d7f2e5d99c518e4493c7b22b4b89f7f4f8df601",
+    "admin": 1,
+    "employee": null,
+    "created_at": "2026-08-19T04:17:31.923Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 23,
+  "fields": {
+    "key": "64d8e7d4ed907858b8de80af36de5f5ad398ea04def46022c3b9d6f8f16756ad",
+    "admin": 1,
+    "employee": null,
+    "created_at": "2026-08-19T04:42:19.121Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 24,
+  "fields": {
+    "key": "43a5e0468e21b3e8d2b4858486cb7e6c83addddb0cacffbac92f1db36593365e",
+    "admin": 1,
+    "employee": null,
+    "created_at": "2026-08-21T10:18:17.639Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 25,
+  "fields": {
+    "key": "583560127456e6498ef4852f3c25a3a3319a6126cb96f8c0cd473fe825bed56a",
+    "admin": 1,
+    "employee": null,
+    "created_at": "2026-08-21T10:21:00.636Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 26,
+  "fields": {
+    "key": "4a78555a10ee7cd81cbc6a5c1a878663e4b58a2ce33c5066e57786b4fc22bea7",
+    "admin": 1,
+    "employee": null,
+    "created_at": "2026-08-21T11:03:06.315Z"
+  }
+},
+{
+  "model": "accounts.authtoken",
+  "pk": 27,
+  "fields": {
+    "key": "4a1cbef0f0195e607e4e5feee723bbe9d2fd6a5f52bd95c6ed29856e8a1dabb2",
+    "admin": 1,
+    "employee": null,
+    "created_at": "2026-08-21T11:05:32.827Z"
+  }
+},
+{
+  "model": "tasks.task",
+  "pk": 1,
+  "fields": {
+    "task_id": "TASK-001",
+    "project_name": "",
+    "task_name": "App Development",
+    "task_details": "Super Bae - App Development",
+    "assigned_to": 30,
+    "assigned_by_admin": 1,
+    "assigned_by_employee": null,
+    "priority": "urgent",
+    "assigned_date": "2026-08-18",
+    "due_date": "2026-08-31",
+    "allotted_time": "200.00",
+    "task_status": "not_started",
+    "total_time_taken": "0.00",
+    "remaining_or_over_time": "0.00",
+    "task_sheet_link": "",
+    "employee_remarks": "",
+    "submitted_date": null,
+    "quality_of_task": "",
+    "rating": null,
+    "admin_remarks": "",
+    "reviewed_date": null,
+    "rework_count": 0,
+    "cancel_reason": "",
+    "last_activity": "2026-08-18T12:49:21.418Z",
+    "status_before_hold": "",
+    "recurring_source": null,
+    "generated_for_date": null,
+    "reviewed_by_admin": null,
+    "reviewed_by_employee": null
+  }
+},
+{
+  "model": "tasks.task",
+  "pk": 2,
+  "fields": {
+    "task_id": "TASK-002",
+    "project_name": "",
+    "task_name": "Ad Creatives",
+    "task_details": "Billiontags Ad Creatives for Acquiring Clients in Social Media",
+    "assigned_to": 20,
+    "assigned_by_admin": 1,
+    "assigned_by_employee": null,
+    "priority": "high",
+    "assigned_date": "2026-08-18",
+    "due_date": "2026-08-19",
+    "allotted_time": "8.00",
+    "task_status": "not_started",
+    "total_time_taken": "0.00",
+    "remaining_or_over_time": "0.00",
+    "task_sheet_link": "",
+    "employee_remarks": "",
+    "submitted_date": null,
+    "quality_of_task": "",
+    "rating": null,
+    "admin_remarks": "",
+    "reviewed_date": null,
+    "rework_count": 0,
+    "cancel_reason": "",
+    "last_activity": "2026-08-18T12:55:01.577Z",
+    "status_before_hold": "",
+    "recurring_source": null,
+    "generated_for_date": null,
+    "reviewed_by_admin": null,
+    "reviewed_by_employee": null
+  }
+},
+{
+  "model": "tasks.task",
+  "pk": 3,
+  "fields": {
+    "task_id": "TASK-003",
+    "project_name": "",
+    "task_name": "Cultureroots Reports Reconcillation 60 mins",
+    "task_details": "Reconcile the works on a regular basis",
+    "assigned_to": 8,
+    "assigned_by_admin": 2,
+    "assigned_by_employee": null,
+    "priority": "high",
+    "assigned_date": "2026-08-18",
+    "due_date": "2026-08-18",
+    "allotted_time": "1.00",
+    "task_status": "not_started",
+    "total_time_taken": "0.00",
+    "remaining_or_over_time": "0.00",
+    "task_sheet_link": "",
+    "employee_remarks": "",
+    "submitted_date": null,
+    "quality_of_task": "",
+    "rating": null,
+    "admin_remarks": "",
+    "reviewed_date": null,
+    "rework_count": 0,
+    "cancel_reason": "",
+    "last_activity": "2026-08-18T12:56:31.595Z",
+    "status_before_hold": "",
+    "recurring_source": 1,
+    "generated_for_date": "2026-08-18",
+    "reviewed_by_admin": null,
+    "reviewed_by_employee": null
+  }
+},
+{
+  "model": "tasks.task",
+  "pk": 4,
+  "fields": {
+    "task_id": "TASK-004",
+    "project_name": "",
+    "task_name": "Task Allocation",
+    "task_details": "Task Allocation for the month",
+    "assigned_to": 22,
+    "assigned_by_admin": 1,
+    "assigned_by_employee": null,
+    "priority": "medium",
+    "assigned_date": "2026-08-18",
+    "due_date": "2026-08-18",
+    "allotted_time": "0.25",
+    "task_status": "under_review",
+    "total_time_taken": "0.07",
+    "remaining_or_over_time": "0.18",
+    "task_sheet_link": "https://docs.google.com/spreadsheets/d/1Ly5U7bhLrHu2h2t6YjxNBxfxJxsIY8W3GiyrC_SNkHo/edit?gid=1686289564#gid=1686289564",
+    "employee_remarks": "",
+    "submitted_date": "2026-08-18T13:08:59.610Z",
+    "quality_of_task": "",
+    "rating": null,
+    "admin_remarks": "",
+    "reviewed_date": null,
+    "rework_count": 0,
+    "cancel_reason": "",
+    "last_activity": "2026-08-18T12:58:12.182Z",
+    "status_before_hold": "",
+    "recurring_source": null,
+    "generated_for_date": null,
+    "reviewed_by_admin": null,
+    "reviewed_by_employee": null
+  }
+},
+{
+  "model": "tasks.task",
+  "pk": 5,
+  "fields": {
+    "task_id": "TASK-005",
+    "project_name": "",
+    "task_name": "Check Email",
+    "task_details": "Check Email daily",
+    "assigned_to": 22,
+    "assigned_by_admin": 1,
+    "assigned_by_employee": null,
+    "priority": "medium",
+    "assigned_date": "2026-08-18",
+    "due_date": "2026-08-18",
+    "allotted_time": "0.25",
+    "task_status": "not_started",
+    "total_time_taken": "0.00",
+    "remaining_or_over_time": "0.00",
+    "task_sheet_link": "",
+    "employee_remarks": "",
+    "submitted_date": null,
+    "quality_of_task": "",
+    "rating": null,
+    "admin_remarks": "",
+    "reviewed_date": null,
+    "rework_count": 0,
+    "cancel_reason": "",
+    "last_activity": "2026-08-18T13:05:18.839Z",
+    "status_before_hold": "",
+    "recurring_source": 2,
+    "generated_for_date": "2026-08-18",
+    "reviewed_by_admin": null,
+    "reviewed_by_employee": null
+  }
+},
+{
+  "model": "tasks.task",
+  "pk": 6,
+  "fields": {
+    "task_id": "TASK-006",
+    "project_name": "",
+    "task_name": "Check Email",
+    "task_details": "Check Email daily",
+    "assigned_to": 22,
+    "assigned_by_admin": 1,
+    "assigned_by_employee": null,
+    "priority": "medium",
+    "assigned_date": "2026-08-19",
+    "due_date": "2026-08-19",
+    "allotted_time": "0.25",
+    "task_status": "not_started",
+    "total_time_taken": "0.00",
+    "remaining_or_over_time": "0.00",
+    "task_sheet_link": "",
+    "employee_remarks": "",
+    "submitted_date": null,
+    "quality_of_task": "",
+    "rating": null,
+    "admin_remarks": "",
+    "reviewed_date": null,
+    "rework_count": 0,
+    "cancel_reason": "",
+    "last_activity": "2026-08-19T04:00:31.668Z",
+    "status_before_hold": "",
+    "recurring_source": 2,
+    "generated_for_date": "2026-08-19",
+    "reviewed_by_admin": null,
+    "reviewed_by_employee": null
+  }
+},
+{
+  "model": "tasks.task",
+  "pk": 7,
+  "fields": {
+    "task_id": "TASK-007",
+    "project_name": "",
+    "task_name": "Cultureroots Reports Reconcillation 60 mins",
+    "task_details": "Reconcile the works on a regular basis",
+    "assigned_to": 8,
+    "assigned_by_admin": 2,
+    "assigned_by_employee": null,
+    "priority": "high",
+    "assigned_date": "2026-08-19",
+    "due_date": "2026-08-19",
+    "allotted_time": "1.00",
+    "task_status": "not_started",
+    "total_time_taken": "0.00",
+    "remaining_or_over_time": "0.00",
+    "task_sheet_link": "",
+    "employee_remarks": "",
+    "submitted_date": null,
+    "quality_of_task": "",
+    "rating": null,
+    "admin_remarks": "",
+    "reviewed_date": null,
+    "rework_count": 0,
+    "cancel_reason": "",
+    "last_activity": "2026-08-19T04:00:34.587Z",
+    "status_before_hold": "",
+    "recurring_source": 1,
+    "generated_for_date": "2026-08-19",
+    "reviewed_by_admin": null,
+    "reviewed_by_employee": null
+  }
+},
+{
+  "model": "tasks.task",
+  "pk": 8,
+  "fields": {
+    "task_id": "TASK-008",
+    "project_name": "",
+    "task_name": "Check Email",
+    "task_details": "Check Email daily",
+    "assigned_to": 22,
+    "assigned_by_admin": 1,
+    "assigned_by_employee": null,
+    "priority": "medium",
+    "assigned_date": "2026-08-21",
+    "due_date": "2026-08-20",
+    "allotted_time": "0.25",
+    "task_status": "not_started",
+    "total_time_taken": "0.00",
+    "remaining_or_over_time": "0.00",
+    "task_sheet_link": "",
+    "employee_remarks": "",
+    "submitted_date": null,
+    "quality_of_task": "",
+    "rating": null,
+    "admin_remarks": "",
+    "reviewed_date": null,
+    "rework_count": 0,
+    "cancel_reason": "",
+    "last_activity": "2026-08-21T10:18:37.322Z",
+    "status_before_hold": "",
+    "recurring_source": 2,
+    "generated_for_date": "2026-08-20",
+    "reviewed_by_admin": null,
+    "reviewed_by_employee": null
+  }
+},
+{
+  "model": "tasks.task",
+  "pk": 9,
+  "fields": {
+    "task_id": "TASK-009",
+    "project_name": "",
+    "task_name": "Check Email",
+    "task_details": "Check Email daily",
+    "assigned_to": 22,
+    "assigned_by_admin": 1,
+    "assigned_by_employee": null,
+    "priority": "medium",
+    "assigned_date": "2026-08-21",
+    "due_date": "2026-08-21",
+    "allotted_time": "0.25",
+    "task_status": "not_started",
+    "total_time_taken": "0.00",
+    "remaining_or_over_time": "0.00",
+    "task_sheet_link": "",
+    "employee_remarks": "",
+    "submitted_date": null,
+    "quality_of_task": "",
+    "rating": null,
+    "admin_remarks": "",
+    "reviewed_date": null,
+    "rework_count": 0,
+    "cancel_reason": "",
+    "last_activity": "2026-08-21T10:18:38.749Z",
+    "status_before_hold": "",
+    "recurring_source": 2,
+    "generated_for_date": "2026-08-21",
+    "reviewed_by_admin": null,
+    "reviewed_by_employee": null
+  }
+},
+{
+  "model": "tasks.task",
+  "pk": 10,
+  "fields": {
+    "task_id": "TASK-010",
+    "project_name": "",
+    "task_name": "Cultureroots Reports Reconcillation 60 mins",
+    "task_details": "Reconcile the works on a regular basis",
+    "assigned_to": 8,
+    "assigned_by_admin": 2,
+    "assigned_by_employee": null,
+    "priority": "high",
+    "assigned_date": "2026-08-21",
+    "due_date": "2026-08-20",
+    "allotted_time": "1.00",
+    "task_status": "not_started",
+    "total_time_taken": "0.00",
+    "remaining_or_over_time": "0.00",
+    "task_sheet_link": "",
+    "employee_remarks": "",
+    "submitted_date": null,
+    "quality_of_task": "",
+    "rating": null,
+    "admin_remarks": "",
+    "reviewed_date": null,
+    "rework_count": 0,
+    "cancel_reason": "",
+    "last_activity": "2026-08-21T10:18:40.890Z",
+    "status_before_hold": "",
+    "recurring_source": 1,
+    "generated_for_date": "2026-08-20",
+    "reviewed_by_admin": null,
+    "reviewed_by_employee": null
+  }
+},
+{
+  "model": "tasks.task",
+  "pk": 11,
+  "fields": {
+    "task_id": "TASK-011",
+    "project_name": "",
+    "task_name": "Cultureroots Reports Reconcillation 60 mins",
+    "task_details": "Reconcile the works on a regular basis",
+    "assigned_to": 8,
+    "assigned_by_admin": 2,
+    "assigned_by_employee": null,
+    "priority": "high",
+    "assigned_date": "2026-08-21",
+    "due_date": "2026-08-21",
+    "allotted_time": "1.00",
+    "task_status": "not_started",
+    "total_time_taken": "0.00",
+    "remaining_or_over_time": "0.00",
+    "task_sheet_link": "",
+    "employee_remarks": "",
+    "submitted_date": null,
+    "quality_of_task": "",
+    "rating": null,
+    "admin_remarks": "",
+    "reviewed_date": null,
+    "rework_count": 0,
+    "cancel_reason": "",
+    "last_activity": "2026-08-21T10:18:42.319Z",
+    "status_before_hold": "",
+    "recurring_source": 1,
+    "generated_for_date": "2026-08-21",
+    "reviewed_by_admin": null,
+    "reviewed_by_employee": null
+  }
+},
+{
+  "model": "tasks.timersession",
+  "pk": 1,
+  "fields": {
+    "task": 4,
+    "employee": 22,
+    "start_time": "2026-08-18T13:04:38.219Z",
+    "end_time": "2026-08-18T13:08:59.390Z",
+    "duration_seconds": 261,
+    "is_rework_session": false
+  }
+},
+{
+  "model": "tasks.taskmaster",
+  "pk": 1,
+  "fields": {
+    "project_name": "",
+    "task_name": "App Development",
+    "default_hours": "200.00",
+    "is_active": true,
+    "created_at": "2026-08-18T12:48:17.938Z"
+  }
+},
+{
+  "model": "tasks.taskmaster",
+  "pk": 2,
+  "fields": {
+    "project_name": "",
+    "task_name": "Logo Creation",
+    "default_hours": "48.00",
+    "is_active": true,
+    "created_at": "2026-08-18T12:49:31.742Z"
+  }
+},
+{
+  "model": "tasks.taskmaster",
+  "pk": 3,
+  "fields": {
+    "project_name": "",
+    "task_name": "Ad Creatives",
+    "default_hours": "8.00",
+    "is_active": true,
+    "created_at": "2026-08-18T12:54:13.673Z"
+  }
+},
+{
+  "model": "tasks.taskmaster",
+  "pk": 4,
+  "fields": {
+    "project_name": "",
+    "task_name": "Cultureroots Reports Reconcillation 60 mins",
+    "default_hours": "1.00",
+    "is_active": true,
+    "created_at": "2026-08-18T12:55:37.081Z"
+  }
+},
+{
+  "model": "tasks.taskmaster",
+  "pk": 5,
+  "fields": {
+    "project_name": "",
+    "task_name": "Task Allocation",
+    "default_hours": "0.25",
+    "is_active": true,
+    "created_at": "2026-08-18T12:56:41.028Z"
+  }
+},
+{
+  "model": "tasks.taskmaster",
+  "pk": 6,
+  "fields": {
+    "project_name": "",
+    "task_name": "Check Email",
+    "default_hours": "0.25",
+    "is_active": true,
+    "created_at": "2026-08-18T13:03:28.432Z"
+  }
+},
+{
+  "model": "tasks.taskmaster",
+  "pk": 7,
+  "fields": {
+    "project_name": "Superbae",
+    "task_name": "Create the logo for superbae",
+    "default_hours": "0.25",
+    "is_active": true,
+    "created_at": "2026-08-21T10:20:15.963Z"
+  }
+},
+{
+  "model": "tasks.recurringtaskdefinition",
+  "pk": 1,
+  "fields": {
+    "task_name": "Cultureroots Reports Reconcillation 60 mins",
+    "task_details": "Reconcile the works on a regular basis",
+    "assigned_to": 8,
+    "priority": "high",
+    "allotted_time": "1.00",
+    "frequency": "daily",
+    "weekdays": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "start_date": "2026-08-18",
+    "end_date": "2026-08-31",
+    "assigned_by_admin": 2,
+    "assigned_by_employee": null,
+    "is_active": true,
+    "created_at": "2026-08-18T12:56:30.013Z"
+  }
+},
+{
+  "model": "tasks.recurringtaskdefinition",
+  "pk": 2,
+  "fields": {
+    "task_name": "Check Email",
+    "task_details": "Check Email daily",
+    "assigned_to": 22,
+    "priority": "medium",
+    "allotted_time": "0.25",
+    "frequency": "daily",
+    "weekdays": [
+      0,
+      1,
+      2,
+      3,
+      4,
+      5
+    ],
+    "start_date": "2026-08-18",
+    "end_date": null,
+    "assigned_by_admin": 1,
+    "assigned_by_employee": null,
+    "is_active": true,
+    "created_at": "2026-08-18T13:05:17.272Z"
+  }
+},
+{
+  "model": "tasks.activitylog",
+  "pk": 1,
+  "fields": {
+    "task": 1,
+    "actor_admin": 1,
+    "actor_employee": null,
+    "action": "created",
+    "from_status": "",
+    "to_status": "not_started",
+    "details": {
+      "due_date": "2026-08-31",
+      "priority": "urgent",
+      "assigned_to": "Yogesh Kumar",
+      "allotted_time": "200.00"
+    },
+    "created_at": "2026-08-18T12:49:21.893Z"
+  }
+},
+{
+  "model": "tasks.activitylog",
+  "pk": 2,
+  "fields": {
+    "task": 2,
+    "actor_admin": 1,
+    "actor_employee": null,
+    "action": "created",
+    "from_status": "",
+    "to_status": "not_started",
+    "details": {
+      "due_date": "2026-08-19",
+      "priority": "high",
+      "assigned_to": "Timo Jedidiah",
+      "allotted_time": "8.00"
+    },
+    "created_at": "2026-08-18T12:55:02.049Z"
+  }
+},
+{
+  "model": "tasks.activitylog",
+  "pk": 3,
+  "fields": {
+    "task": 4,
+    "actor_admin": 1,
+    "actor_employee": null,
+    "action": "created",
+    "from_status": "",
+    "to_status": "not_started",
+    "details": {
+      "due_date": "2026-08-18",
+      "priority": "medium",
+      "assigned_to": "Revathi",
+      "allotted_time": "0.25"
+    },
+    "created_at": "2026-08-18T12:58:12.649Z"
+  }
+},
+{
+  "model": "tasks.activitylog",
+  "pk": 4,
+  "fields": {
+    "task": 4,
+    "actor_admin": null,
+    "actor_employee": 22,
+    "action": "started",
+    "from_status": "not_started",
+    "to_status": "in_progress",
+    "details": {},
+    "created_at": "2026-08-18T13:04:38.672Z"
+  }
+},
+{
+  "model": "tasks.activitylog",
+  "pk": 5,
+  "fields": {
+    "task": 4,
+    "actor_admin": null,
+    "actor_employee": 22,
+    "action": "submitted",
+    "from_status": "in_progress",
+    "to_status": "submitted",
+    "details": {
+      "task_sheet_link": "https://docs.google.com/spreadsheets/d/1Ly5U7bhLrHu2h2t6YjxNBxfxJxsIY8W3GiyrC_SNkHo/edit?gid=1686289564#gid=1686289564"
+    },
+    "created_at": "2026-08-18T13:09:00.266Z"
+  }
+}
+]
