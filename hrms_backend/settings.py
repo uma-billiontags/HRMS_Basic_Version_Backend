@@ -120,6 +120,33 @@ WSGI_APPLICATION = 'hrms_backend.wsgi.application'
 #     }
 # }
 
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.mysql',
+#         'NAME': os.environ.get('DB_NAME'),
+#         'USER': os.environ.get('DB_USER'),
+#         'PASSWORD': os.environ.get('DB_PASSWORD'),
+#         'HOST': os.environ.get('DB_HOST'),
+#         'PORT': os.environ.get('DB_PORT'),
+#         'OPTIONS': {
+#             'ssl': (
+#                 {'ca': str(BASE_DIR / 'ca.pem')}
+#                 if (BASE_DIR / 'ca.pem').exists()
+#                 else {}   # still enables SSL, just skips CA verification
+#             ),
+#         },
+#     }
+# }
+
+import os
+from pathlib import Path
+
+ca_cert_content = os.environ.get('DB_CA_CERT')
+ca_path = BASE_DIR / 'ca.pem'
+
+if ca_cert_content and not ca_path.exists():
+    ca_path.write_text(ca_cert_content)
+
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
@@ -128,12 +155,11 @@ DATABASES = {
         'PASSWORD': os.environ.get('DB_PASSWORD'),
         'HOST': os.environ.get('DB_HOST'),
         'PORT': os.environ.get('DB_PORT'),
+        'CONN_MAX_AGE': 60,
+        'CONN_HEALTH_CHECKS': True,
         'OPTIONS': {
-            'ssl': (
-                {'ca': str(BASE_DIR / 'ca.pem')}
-                if (BASE_DIR / 'ca.pem').exists()
-                else {}   # still enables SSL, just skips CA verification
-            ),
+            'ssl': {'ca': str(ca_path)} if ca_path.exists() else {},
+            'connect_timeout': 10,
         },
     }
 }
