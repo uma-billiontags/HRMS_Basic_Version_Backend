@@ -146,3 +146,22 @@ def request_rework(request, pk):
 
     return Response(TaskListSerializer(task).data)
 
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_rework_tasks(request):
+    """
+    GET /api/tasks/rework_tasks/
+    Admin-only. Every task that has EVER been sent back for rework
+    (rework_count > 0), regardless of current status — unlike the
+    Review Queue (get_review_tasks), which only shows tasks currently
+    sitting in submitted/resubmitted/under_review, this stays populated
+    as the task moves through rework_needed -> in_progress -> paused ->
+    resubmitted -> under_review -> completed, so admin never loses
+    visibility on a task once it's been reworked.
+    """
+    if not _is_admin(request):
+        return Response({"detail": "Admin only."}, status=status.HTTP_403_FORBIDDEN)
+
+    tasks = Task.objects.filter(rework_count__gt=0)
+
+    return Response(TaskListSerializer(tasks.order_by("-reviewed_date"), many=True).data)

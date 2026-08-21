@@ -23,7 +23,6 @@ class Task(models.Model):
         COMPLETED = "completed", "Completed"
         ON_HOLD = "on_hold", "On Hold"
         CANCELLED = "cancelled", "Cancelled"
-        ARCHIVED = "archived", "Archived"
 
     class Quality(models.TextChoices):
         EXCELLENT = "excellent", "Excellent"
@@ -36,6 +35,7 @@ class Task(models.Model):
     task_id = models.CharField(max_length=20, unique=True, editable=False, blank=True)
 
     # ── Admin fields (set when creating/editing the task) ─────────────────
+    project_name = models.CharField(max_length=255, blank=True)   # ← NEW
     task_name = models.CharField(max_length=255)
     task_details = models.TextField(blank=True)
     assigned_to = models.ForeignKey(
@@ -85,6 +85,8 @@ class Task(models.Model):
     admin_remarks = models.TextField(blank=True)
     reviewed_date = models.DateTimeField(null=True, blank=True)
     rework_count = models.PositiveIntegerField(default=0)
+    
+    cancel_reason = models.TextField(blank=True, default="")
 
     # ── Bookkeeping ─────────────────────────────────────────────────────────
     last_activity = models.DateTimeField(auto_now=True)
@@ -99,6 +101,15 @@ class Task(models.Model):
     generated_for_date = models.DateField(
         null=True, blank=True,
         help_text="Which calendar day this occurrence belongs to. Only set for recurring-generated tasks.",
+    )
+    
+    reviewed_by_admin = models.ForeignKey(
+        Admin, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="tasks_reviewed", help_text="Set when an Admin approved this task.",
+    )
+    reviewed_by_employee = models.ForeignKey(
+        Employee, null=True, blank=True, on_delete=models.SET_NULL,
+        related_name="tasks_reviewed_as_tl", help_text="Set when a TL approved this task.",
     )
 
     class Meta:
@@ -166,6 +177,15 @@ class Task(models.Model):
         Task = apps.get_model("tasks", "Task")
         Task.objects.filter(assigned_by__isnull=False).update(assigned_by_admin=models.F("assigned_by"))
         
+class TaskAttachment(models.Model):
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="attachments")
+    file = models.ImageField(upload_to="task_attachments/%Y/%m/")
+    uploaded_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["uploaded_at"]
+
 class TimerSession(models.Model):
     """
     One row per Start->Pause (or Start->Submit) interval. Never overwritten —
@@ -220,17 +240,19 @@ class TaskMaster(models.Model):
     """
     Reusable task catalog. Admin picks from this in the Create Task form;
     picking one prefills allotted_time and (via the frontend) the due date.
-    """
+    """ 
+    project_name = models.CharField(max_length=255, blank=True)
     task_name = models.CharField(max_length=255)
     default_hours = models.DecimalField(max_digits=6, decimal_places=2)
     is_active = models.BooleanField(default=True)  # lets you retire old entries without deleting history
     created_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
-        ordering = ["task_name"]
+        ordering = ["project_name", "task_name"]
 
     def __str__(self):
-        return f"{self.task_name} — {self.default_hours}hr"
+        prefix = f"{self.project_name} — " if self.project_name else ""
+        return f"{prefix}{self.task_name} — {self.default_hours}hr"
     
 
 # tasks/models.py — ADD to the existing file (keep everything else as-is)

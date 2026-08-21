@@ -148,8 +148,6 @@ def stop_recurring_task(request, pk):
 def get_all_tasks(request):
     generate_recurring_tasks()          # ← ADD THIS LINE
     tasks = Task.objects.all()
-    if request.query_params.get("include_archived") != "true":
-        tasks = tasks.exclude(task_status=Task.Status.ARCHIVED)
     return Response(TaskListSerializer(tasks, many=True).data)
 
 
@@ -161,8 +159,6 @@ def get_my_tasks(request):
     if employee is None:
         return Response({"detail": "Employees only."}, status=status.HTTP_403_FORBIDDEN)
     tasks = Task.objects.filter(assigned_to=employee)
-    if request.query_params.get("include_archived") != "true":
-        tasks = tasks.exclude(task_status=Task.Status.ARCHIVED)
     return Response(TaskListSerializer(tasks, many=True).data)
 
 
@@ -174,6 +170,4 @@ def get_tl_tasks(request):
         return Response({"detail": "Team leads only."}, status=status.HTTP_403_FORBIDDEN)
     employee = _current_employee(request)
     tasks = Task.objects.filter(assigned_by_employee=employee)
-    if request.query_params.get("include_archived") != "true":
-        tasks = tasks.exclude(task_status=Task.Status.ARCHIVED)
     return Response(TaskListSerializer(tasks, many=True).data)

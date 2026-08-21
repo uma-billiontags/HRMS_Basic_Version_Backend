@@ -84,9 +84,9 @@ def delete_task_master(request, pk):
 def bulk_create_task_master(request):
     """
     POST /api/tasks/task_master/bulk_create/
-    body: { "items": [{"task_name": "...", "default_hours": 3}, ...] }
+    body: { "items": [{"project_name": "...", "task_name": "...", "default_hours": 3}, ...] }
     Processes every row independently — one bad row doesn't block the rest.
-    Duplicate task_name (case-insensitive) is skipped, not an error.
+    Duplicate (project_name, task_name, default_hours) case-insensitive is skipped, not an error.
     """
     if not _is_admin(request):
         return Response({"detail": "Admin only."}, status=status.HTTP_403_FORBIDDEN)
@@ -99,9 +99,13 @@ def bulk_create_task_master(request):
 
     for idx, row in enumerate(items):
         row_num = idx + 1
+        project = str(row.get("project_name", "")).strip()
         name = str(row.get("task_name", "")).strip()
         raw_hours = row.get("default_hours")
 
+        if not project:
+            errors.append({"row": row_num, "task_name": name, "error": "Missing project name"})
+            continue
         if not name:
             errors.append({"row": row_num, "error": "Missing task name"})
             continue
@@ -114,11 +118,16 @@ def bulk_create_task_master(request):
             errors.append({"row": row_num, "task_name": name, "error": f"Invalid hours: {raw_hours!r}"})
             continue
 
-        if TaskMaster.objects.filter(task_name__iexact=name, default_hours=hours).exists():
-            skipped.append({"row": row_num, "task_name": name, "reason": f"Already exists at {hours}hr"})
+        if TaskMaster.objects.filter(
+            task_name__iexact=name, default_hours=hours, project_name__iexact=project
+        ).exists():
+            skipped.append({
+                "row": row_num, "task_name": name,
+                "reason": f'Already exists under "{project}" at {hours}hr',
+            })
             continue
 
-        tm = TaskMaster.objects.create(task_name=name, default_hours=hours)
+        tm = TaskMaster.objects.create(project_name=project, task_name=name, default_hours=hours)
         created.append(TaskMasterSerializer(tm).data)
 
     return Response({

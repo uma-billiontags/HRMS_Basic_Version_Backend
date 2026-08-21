@@ -1,9 +1,16 @@
 # tasks/serializers.py
 
 from rest_framework import serializers
-from .models import Task, TimerSession, TaskMaster, RecurringTaskDefinition
+from .models import Task, TimerSession, TaskMaster, RecurringTaskDefinition, TaskAttachment
+from django.core.validators import URLValidator
+from django.core.exceptions import ValidationError as DjangoValidationError
 
 
+class TaskAttachmentSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = TaskAttachment
+        fields = ["id", "file", "uploaded_at"]
+        
 class TaskListSerializer(serializers.ModelSerializer):
     """
     Used for the task table. assigned_to_name / department_name / assigned_by_name
@@ -17,18 +24,19 @@ class TaskListSerializer(serializers.ModelSerializer):
     department_name = serializers.SerializerMethodField()
     assigned_by_name = serializers.SerializerMethodField()
     has_active_session = serializers.SerializerMethodField()
+    attachments = TaskAttachmentSerializer(many=True, read_only=True)
 
     class Meta:
         model = Task
         fields = [
-            "id", "task_id", "task_name", "task_details",
+            "id", "task_id", "project_name", "task_name", "task_details",
             "assigned_to", "assigned_to_name", "department_name",
             "assigned_by_name",
             "priority", "assigned_date", "due_date", "allotted_time",
             "task_status", "total_time_taken", "remaining_or_over_time",
             "task_sheet_link", "employee_remarks", "submitted_date",
             "quality_of_task", "rating", "admin_remarks", "reviewed_date",
-            "rework_count", "has_active_session", "created_by_role",
+            "rework_count", "has_active_session", "created_by_role", "attachments", "cancel_reason"
         ]
 
     def get_assigned_to_name(self, obj):
@@ -55,7 +63,7 @@ class TaskCreateSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = Task
-        fields = ["task_name", "task_details"]
+        fields = ["project_name", "task_name", "task_details"]
 
     def validate_task_name(self, value):
         if not value.strip():
@@ -93,6 +101,15 @@ class TaskSubmitSerializer(serializers.Serializer):
     """
     task_sheet_link = serializers.CharField(required=True, allow_blank=False)
     employee_remarks = serializers.CharField(required=False, allow_blank=True, default="")
+    
+    def validate_task_sheet_link(self, value):
+        value = value.strip()
+        validator = URLValidator(schemes=["http", "https"])
+        try:
+            validator(value)
+        except DjangoValidationError:
+            raise serializers.ValidationError("Enter a valid http:// or https:// URL.")
+        return value
     
     
 # ── Add to tasks/serializers.py ───────────────────────────  ───────────────────
@@ -137,7 +154,7 @@ class TaskCreateAssignSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = [
-            "task_name", "task_details",
+            "project_name", "task_name", "task_details",
             "assigned_to", "priority", "due_date", "allotted_time",
         ]
         extra_kwargs = {
@@ -157,7 +174,7 @@ class TaskMasterSerializer(serializers.ModelSerializer):
 
     class Meta:
         model = TaskMaster
-        fields = ["id", "task_name", "default_hours", "is_active", "label"]
+        fields = ["id", "project_name", "task_name", "default_hours", "is_active", "label"]
 
     def get_label(self, obj):
         total_minutes = round(float(obj.default_hours) * 60)
@@ -173,11 +190,17 @@ class TaskMasterSerializer(serializers.ModelSerializer):
 class TaskMasterWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = TaskMaster
-        fields = ["id", "task_name", "default_hours", "is_active"]
+        fields = ["id", "project_name", "task_name", "default_hours", "is_active"]
         extra_kwargs = {
             "is_active": {"required": False},
         }
 
+    def validate_project_name(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("Project name cannot be blank.")
+        return value
+    
     def validate_task_name(self, value):
         value = value.strip()
         if not value:

@@ -25,18 +25,7 @@ from .utils import _is_admin, _current_employee, _is_tl, _can_manage_tasks, _own
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_all_tasks(request):
-    """
-    GET /api/tasks/get_all_tasks/
-    Everyone — admin and employee alike — sees every task now. Employees
-    are no longer filtered to their own assigned tasks; the frontend
-    renders read-only vs. editable based on whether assigned_to matches
-    the caller. Actual edit permission is still enforced server-side in
-    start_task/pause_task/resume_task/submit_task (assigned_to_id check),
-    so this list-only change doesn't open up any write access.
-    """
     tasks = Task.objects.all()
-    if request.query_params.get("include_archived") != "true":
-        tasks = tasks.exclude(task_status=Task.Status.ARCHIVED)
 
     return Response(TaskListSerializer(tasks, many=True).data)
 
@@ -110,24 +99,6 @@ def create_and_assign_task(request):
 
     return Response(TaskListSerializer(task).data, status=status.HTTP_201_CREATED)
 
-@api_view(["DELETE"])
-@permission_classes([IsAuthenticated])
-def delete_task(request, pk):
-    task = get_object_or_404(Task, pk=pk)
-    if not _owns_task_for_management(request, task):
-        return Response({"detail": "You can only hold tasks you created."}, status=status.HTTP_403_FORBIDDEN)
-
-    task = get_object_or_404(Task, pk=pk)
-    if task.task_status not in (Task.Status.CANCELLED, Task.Status.ARCHIVED):
-        return Response(
-            {"detail": "Only cancelled or archived tasks can be deleted."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
-
-    task_id_str = task.task_id
-    task.delete()  # CASCADE removes sessions, correction_requests; ActivityLog rows are SET_NULL/CASCADE per their FK config
-    return Response({"detail": f"{task_id_str} deleted."}, status=status.HTTP_200_OK)
-
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_tl_tasks(request):
@@ -142,9 +113,7 @@ def get_tl_tasks(request):
 
     employee = _current_employee(request)
     tasks = Task.objects.filter(assigned_by_employee=employee)
-    if request.query_params.get("include_archived") != "true":
-        tasks = tasks.exclude(task_status=Task.Status.ARCHIVED)
-
+  
     return Response(TaskListSerializer(tasks, many=True).data)
 
 
@@ -162,9 +131,7 @@ def get_my_tasks(request):
         return Response({"detail": "Employees only."}, status=status.HTTP_403_FORBIDDEN)
 
     tasks = Task.objects.filter(assigned_to=employee)
-    if request.query_params.get("include_archived") != "true":
-        tasks = tasks.exclude(task_status=Task.Status.ARCHIVED)
-
+    
     return Response(TaskListSerializer(tasks, many=True).data)
 
 @api_view(["GET"])

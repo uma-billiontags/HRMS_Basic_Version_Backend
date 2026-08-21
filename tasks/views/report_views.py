@@ -41,7 +41,7 @@ def get_admin_reports(request):
     total = tasks.count()
     completed = tasks.filter(task_status=Task.Status.COMPLETED).count()
     overdue = tasks.filter(due_date__lt=timezone.now().date()).exclude(
-        task_status__in=[Task.Status.COMPLETED, Task.Status.CANCELLED, Task.Status.ARCHIVED]
+        task_status__in=[Task.Status.COMPLETED, Task.Status.CANCELLED]
     ).count()
     total_hours = tasks.aggregate(total=db_models.Sum("total_time_taken"))["total"] or 0
     avg_rating = tasks.exclude(rating__isnull=True).aggregate(avg=db_models.Avg("rating"))["avg"]
@@ -97,3 +97,80 @@ def get_my_reports(request):
         "tasks": TaskListSerializer(tasks.order_by("-assigned_date"), many=True).data,
     })
     
+
+# tasks/views/reports.py — add these imports at the top
+from django.db.models.functions import TruncMonth
+from django.utils import timezone
+
+
+def _months_ago(date, n):
+    """No dateutil dependency — walk back n months from the 1st of `date`'s month."""
+    year, month = date.year, date.month - n
+    while month <= 0:
+        month += 12
+        year -= 1
+    return date.replace(year=year, month=month, day=1)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_employee_rating_trends(request):
+    """
+    GET /api/tasks/reports/rating_trends/?months=6
+    Admin-only. Monthly average rating per employee, based on reviewed_date
+    (when the task was actually rated during approval). Only counts tasks
+    that have gone through review and received a rating — everything else
+    is excluded, so an employee with zero rated tasks in a month just
+    doesn't appear for that month (not shown as 0).
+    """
+    if not _is_admin(request):
+        return Response({"detail": "Admin only."}, status=status.HTTP_403_FORBIDDEN)
+
+    months = int(request.query_params.get("months", 6))
+    since = _months_ago(timezone.now().date(), months - 1)
+
+    rated_tasks = Task.objects.filter(
+        rating__isnull=False,
+        reviewed_date__date__gte=since,
+    ).annotate(month=TruncMonth("reviewed_date"))
+
+    rows = (
+        rated_tasks.values("assigned_to_id", "assigned_to__name", "month")
+        .annotate(avg_rating=db_models.Avg("rating"), task_count=db_models.Count("id"))
+        .order_by("assigned_to__name", "month")
+    )
+
+    by_employee = {}
+    for r in rows:
+        emp_id = r["assigned_to_id"]
+        if emp_id not in by_employee:
+            by_employee[emp_id] = {
+                "employee_id": emp_id,
+                "employee_name": r["assigned_to__name"],
+                "months": [],
+            }
+        by_employee[emp_id]["months"].append({
+            "month": r["month"].strftime("%Y-%m"),
+            "avg_rating": round(r["avg_rating"], 2),
+            "task_count": r["task_count"],
+        })
+
+    overall_rows = (
+        rated_tasks.values("month")
+        .annotate(avg_rating=db_models.Avg("rating"), task_count=db_models.Count("id"))
+        .order_by("month")
+    )
+    overall_trend = [
+        {"month": r["month"].strftime("%Y-%m"), "avg_rating": round(r["avg_rating"], 2), "task_count": r["task_count"]}
+        for r in overall_rows
+    ]
+
+    return Response({
+        "months_requested": months,
+        "employees": sorted(
+            by_employee.values(),
+            key=lambda e: e["months"][-1]["avg_rating"] if e["months"] else 0,
+            reverse=True,
+        ),
+        "overall_trend": overall_trend,
+    })

@@ -18,6 +18,6 @@ from .models import Task, TaskMaster
 
 @admin.register(TaskMaster)
 class TaskMasterAdmin(admin.ModelAdmin):
-    list_display = ("task_name", "default_hours", "is_active", "created_at")
-    list_filter = ("is_active",)
-    search_fields = ("task_name",)
+    list_display = ("project_name", "task_name", "default_hours", "is_active", "created_at")
+    list_filter = ("is_active", "project_name")
+    search_fields = ("project_name", "task_name")

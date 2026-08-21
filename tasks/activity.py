@@ -17,7 +17,6 @@ class ActivityLog(models.Model):
         HOLD = "hold", "Put On Hold"
         RELEASED_HOLD = "released_hold", "Hold Released"
         CANCELLED = "cancelled", "Cancelled"
-        ARCHIVED = "archived", "Archived"
         CORRECTION_REQUESTED = "correction_requested", "Time Correction Requested"
         CORRECTION_DECIDED = "correction_decided", "Time Correction Decided"
 

@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from accounts.models import Employee
-from ..models import Task, TimerSession
+from ..models import Task, TimerSession, TaskAttachment
 from ..activity import ActivityLog, log_activity
 from django.db import transaction
 from ..activity import ActivityLog, log_activity
@@ -151,6 +151,8 @@ def resume_task(request, pk):
 
     return Response(TaskListSerializer(task).data)
 
+from ..models import Task, TimerSession, TaskAttachment
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def submit_task(request, pk):
@@ -183,13 +185,17 @@ def submit_task(request, pk):
         task.task_status = Task.Status.RESUBMITTED if task.rework_count > 0 else Task.Status.SUBMITTED
         task.save(update_fields=["task_sheet_link", "employee_remarks", "submitted_date", "task_status"])
 
+        # Images are entirely optional — loop is a no-op if nothing was sent
+        for f in request.FILES.getlist("attachments"):
+            TaskAttachment.objects.create(task=task, file=f, uploaded_by=employee)
+
         if open_session:
             task.recalc_total_time()
 
         log_activity(
             task, request.user, ActivityLog.Action.SUBMITTED,
             from_status=from_status, to_status=task.task_status,
-            details={"task_sheet_link": task.task_sheet_link},
+            details={"task_sheet_link": task.task_sheet_link, "attachment_count": len(request.FILES.getlist("attachments"))},
         )
 
     return Response(TaskListSerializer(task).data)
