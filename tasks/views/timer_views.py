@@ -15,18 +15,20 @@ from ..activity import ActivityLog, log_activity
 from ..serializers import (
     TaskListSerializer, TimerSessionSerializer, TaskSubmitSerializer,
 )
-from .utils import _is_admin, _current_employee, timezone_now
+
+from .utils import _is_admin, _current_task_actor, _is_task_assignee, timezone_now
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_active_session(request):
-    employee = _current_employee(request)
-    if employee is None:
-        return Response({"detail": "Only employees have timer sessions."}, status=status.HTTP_403_FORBIDDEN)
+    kind, actor = _current_task_actor(request)
+    if actor is None:
+        return Response({"active": False, "task": None, "task_name": None, "session": None})
 
+    owner_filter = {"employee": actor} if kind == "employee" else {"admin": actor}
     session = (
-        TimerSession.objects.filter(employee=employee, end_time__isnull=True)
+        TimerSession.objects.filter(end_time__isnull=True, **owner_filter)
         .select_related("task")
         .first()
     )
@@ -39,61 +41,49 @@ def get_active_session(request):
         "task_name": session.task.task_name,
         "session": TimerSessionSerializer(session).data,
     })
-    
+
+
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def start_task(request, pk):
-    employee = _current_employee(request)
-    if employee is None:
-        return Response({"detail": "Only employees can start a timer."}, status=status.HTTP_403_FORBIDDEN)
+    kind, actor = _current_task_actor(request)
+    if actor is None:
+        return Response({"detail": "Only employees or admins can start a timer."}, status=status.HTTP_403_FORBIDDEN)
 
     task = get_object_or_404(Task, pk=pk)
-    if task.assigned_to_id != employee.id:
+    if not _is_task_assignee(request, task):
         return Response({"detail": "This task isn't assigned to you."}, status=status.HTTP_403_FORBIDDEN)
 
     if task.task_status != Task.Status.NOT_STARTED:
-        return Response(
-            {"detail": "This task has already been started. Use Resume instead."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        return Response({"detail": "This task has already been started. Use Resume instead."}, status=status.HTTP_400_BAD_REQUEST)
 
     with transaction.atomic():
-        if TimerSession.objects.select_for_update().filter(employee=employee, end_time__isnull=True).exists():
-            return Response(
-                {"detail": "You already have an active timer running on another task. Pause or submit it first."},
-                status=status.HTTP_409_CONFLICT,
-            )
+        owner_filter = {"employee": actor} if kind == "employee" else {"admin": actor}
+        if TimerSession.objects.select_for_update().filter(end_time__isnull=True, **owner_filter).exists():
+            return Response({"detail": "You already have an active timer running on another task. Pause or submit it first."}, status=status.HTTP_409_CONFLICT)
 
-        TimerSession.objects.create(task=task, employee=employee)
+        session_kwargs = {"task": task, **owner_filter}
+        TimerSession.objects.create(**session_kwargs)
         task.task_status = Task.Status.IN_PROGRESS
         task.save(update_fields=["task_status"])
-
-        log_activity(
-            task, request.user, ActivityLog.Action.STARTED,
-            from_status="not_started", to_status="in_progress",
-        )
+        log_activity(task, request.user, ActivityLog.Action.STARTED, from_status="not_started", to_status="in_progress")
 
     return Response(TaskListSerializer(task).data)
 
-from django.db import transaction
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def pause_task(request, pk):
-    """
-    POST /api/tasks/<id>/pause/
-    Closes the current open session, calculates its duration, recalculates
-    the task's total time, and sets status = Paused.
-    """
-    employee = _current_employee(request)
-    if employee is None:
-        return Response({"detail": "Only employees can pause a timer."}, status=status.HTTP_403_FORBIDDEN)
+    kind, actor = _current_task_actor(request)
+    if actor is None:
+        return Response({"detail": "Only employees or admins can pause a timer."}, status=status.HTTP_403_FORBIDDEN)
 
     task = get_object_or_404(Task, pk=pk)
-    if task.assigned_to_id != employee.id:
+    if not _is_task_assignee(request, task):
         return Response({"detail": "This task isn't assigned to you."}, status=status.HTTP_403_FORBIDDEN)
 
-    session = TimerSession.objects.filter(task=task, employee=employee, end_time__isnull=True).first()
+    owner_filter = {"employee": actor} if kind == "employee" else {"admin": actor}
+    session = TimerSession.objects.filter(task=task, end_time__isnull=True, **owner_filter).first()
     if not session:
         return Response({"detail": "There's no active timer session to pause."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -107,42 +97,35 @@ def pause_task(request, pk):
             from_status="in_progress", to_status="paused",
             details={"session_id": session.id, "duration_seconds": session.duration_seconds},
         )
-    
+
     return Response(TaskListSerializer(task).data)
 
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def resume_task(request, pk):
-    employee = _current_employee(request)
-    if employee is None:
-        return Response({"detail": "Only employees can resume a timer."}, status=status.HTTP_403_FORBIDDEN)
+    kind, actor = _current_task_actor(request)
+    if actor is None:
+        return Response({"detail": "Only employees or admins can resume a timer."}, status=status.HTTP_403_FORBIDDEN)
 
     task = get_object_or_404(Task, pk=pk)
-    if task.assigned_to_id != employee.id:
+    if not _is_task_assignee(request, task):
         return Response({"detail": "This task isn't assigned to you."}, status=status.HTTP_403_FORBIDDEN)
 
     if task.task_status not in (Task.Status.PAUSED, Task.Status.REWORK_NEEDED):
-        return Response(
-            {"detail": "This task isn't paused or awaiting rework, so it can't be resumed."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        return Response({"detail": "This task isn't paused or awaiting rework, so it can't be resumed."}, status=status.HTTP_400_BAD_REQUEST)
 
     with transaction.atomic():
-        if TimerSession.objects.select_for_update().filter(employee=employee, end_time__isnull=True).exists():
-            return Response(
-                {"detail": "You already have an active timer running on another task. Pause or submit it first."},
-                status=status.HTTP_409_CONFLICT,
-            )
+        owner_filter = {"employee": actor} if kind == "employee" else {"admin": actor}
+        if TimerSession.objects.select_for_update().filter(end_time__isnull=True, **owner_filter).exists():
+            return Response({"detail": "You already have an active timer running on another task. Pause or submit it first."}, status=status.HTTP_409_CONFLICT)
 
         from_status = task.task_status
         session = TimerSession.objects.create(
-            task=task, employee=employee,
-            is_rework_session=(task.task_status == Task.Status.REWORK_NEEDED),
+            task=task, is_rework_session=(task.task_status == Task.Status.REWORK_NEEDED), **owner_filter
         )
         task.task_status = Task.Status.IN_PROGRESS
         task.save(update_fields=["task_status"])
-
         log_activity(
             task, request.user, ActivityLog.Action.RESUMED,
             from_status=from_status, to_status="in_progress",
@@ -151,30 +134,28 @@ def resume_task(request, pk):
 
     return Response(TaskListSerializer(task).data)
 
-from ..models import Task, TimerSession, TaskAttachment
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def submit_task(request, pk):
-    employee = _current_employee(request)
-    if employee is None:
-        return Response({"detail": "Only employees can submit a task."}, status=status.HTTP_403_FORBIDDEN)
+    kind, actor = _current_task_actor(request)
+    if actor is None:
+        return Response({"detail": "Only employees or admins can submit a task."}, status=status.HTTP_403_FORBIDDEN)
 
     task = get_object_or_404(Task, pk=pk)
-    if task.assigned_to_id != employee.id:
+    if not _is_task_assignee(request, task):
         return Response({"detail": "This task isn't assigned to you."}, status=status.HTTP_403_FORBIDDEN)
 
     if task.task_status not in (Task.Status.IN_PROGRESS, Task.Status.PAUSED):
-        return Response(
-            {"detail": "This task must be in progress or paused to submit it."},
-            status=status.HTTP_400_BAD_REQUEST,
-        )
+        return Response({"detail": "This task must be in progress or paused to submit it."}, status=status.HTTP_400_BAD_REQUEST)
 
     serializer = TaskSubmitSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
 
+    owner_filter = {"employee": actor} if kind == "employee" else {"admin": actor}
+
     with transaction.atomic():
-        open_session = TimerSession.objects.filter(task=task, employee=employee, end_time__isnull=True).first()
+        open_session = TimerSession.objects.filter(task=task, end_time__isnull=True, **owner_filter).first()
         if open_session:
             open_session.close()
 
@@ -185,9 +166,9 @@ def submit_task(request, pk):
         task.task_status = Task.Status.RESUBMITTED if task.rework_count > 0 else Task.Status.SUBMITTED
         task.save(update_fields=["task_sheet_link", "employee_remarks", "submitted_date", "task_status"])
 
-        # Images are entirely optional — loop is a no-op if nothing was sent
+        attachment_kwargs = {"uploaded_by": actor} if kind == "employee" else {"uploaded_by_admin": actor}
         for f in request.FILES.getlist("attachments"):
-            TaskAttachment.objects.create(task=task, file=f, uploaded_by=employee)
+            TaskAttachment.objects.create(task=task, file=f, **attachment_kwargs)
 
         if open_session:
             task.recalc_total_time()
@@ -200,17 +181,12 @@ def submit_task(request, pk):
 
     return Response(TaskListSerializer(task).data)
 
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_task_sessions(request, pk):
-    """
-    GET /api/tasks/<id>/sessions/
-    Session history for a task — admin can see any task's sessions,
-    employee can only see sessions for their own assigned task.
-    """
     task = get_object_or_404(Task, pk=pk)
-    if not _is_admin(request) and task.assigned_to_id != request.user.instance.id:
+    if not _is_admin(request) and not _is_task_assignee(request, task):
         return Response({"detail": "You can't view sessions for this task."}, status=status.HTTP_403_FORBIDDEN)
-
     sessions = task.sessions.all()
     return Response(TimerSessionSerializer(sessions, many=True).data)

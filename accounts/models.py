@@ -1,13 +1,4 @@
 # accounts/models.py
-#
-# Two fully independent tables, as requested — no shared base table,
-# no OneToOne split. Each has its own name/email/password.
-#
-# Passwords are hashed with Django's own hasher (the same PBKDF2 algorithm
-# Django's built-in User uses) via make_password()/check_password() —
-# we're just not routing through Django's AbstractUser/AUTH_USER_MODEL
-# machinery to store them.
-
 from django.db import models
 from django.contrib.auth.hashers import make_password, check_password
 import secrets
@@ -17,6 +8,7 @@ class Admin(models.Model):
     name = models.CharField(max_length=150)
     email = models.EmailField(unique=True)
     password = models.CharField(max_length=255)   # stores the HASHED password, never plain text
+    is_active = models.BooleanField(default=True) 
     created_at = models.DateTimeField(auto_now_add=True)
 
     def set_password(self, raw_password):

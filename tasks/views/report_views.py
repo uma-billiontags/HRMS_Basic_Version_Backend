@@ -9,7 +9,7 @@ from rest_framework.permissions import IsAuthenticated
 from ..models import Task
 from ..serializers import ( TaskListSerializer )
 from django.db import models as db_models  # aliased so it doesn't clash with the `models` you already reference via Task etc.
-from tasks.views.utils import _is_admin, _current_employee
+from tasks.views.utils import _is_admin, _current_employee, task_list_queryset
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
@@ -21,7 +21,7 @@ def get_admin_reports(request):
     if not _is_admin(request):
         return Response({"detail": "Admin only."}, status=status.HTTP_403_FORBIDDEN)
 
-    tasks = Task.objects.all()
+    tasks = task_list_queryset()   
     employee_id = request.query_params.get("employee")
     if employee_id:
         tasks = tasks.filter(assigned_to_id=employee_id)
@@ -76,7 +76,7 @@ def get_my_reports(request):
     if employee is None:
         return Response({"detail": "Employees only."}, status=status.HTTP_403_FORBIDDEN)
 
-    tasks = Task.objects.filter(assigned_to=employee)
+    tasks = task_list_queryset().filter(assigned_to=employee) 
     total = tasks.count()
     completed = tasks.filter(task_status=Task.Status.COMPLETED).count()
     total_hours = tasks.aggregate(total=db_models.Sum("total_time_taken"))["total"] or 0

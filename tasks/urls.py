@@ -71,4 +71,9 @@ urlpatterns = [
     path("recurring/<int:pk>/stop/", views.stop_recurring_task, name="recurring-stop"),
     
     path("reports/rating_trends/", views.get_employee_rating_trends, name="reports-rating-trends"),
+    
+    path("get_all_admins/", views.get_all_admins, name="task-admins"),
+    path("admin_my_tasks/", views.get_admin_my_tasks, name="admin-my-tasks"),
+    
+    path("health/", views.health_check, name="health-check"),
 ]

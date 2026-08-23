@@ -43,6 +43,13 @@ class Task(models.Model):
         null=True, blank=True,
     )
     
+    # NEW — set when a TL assigns this task to an Admin instead of an Employee.
+    # Exactly one of assigned_to / assigned_to_admin is set once the task is assigned.
+    assigned_to_admin = models.ForeignKey(
+        Admin, on_delete=models.PROTECT, related_name="assigned_tasks_as_admin",
+        null=True, blank=True,
+    )
+    
     assigned_by_admin = models.ForeignKey(
         Admin, null=True, blank=True, on_delete=models.PROTECT, related_name="tasks_created"
     )
@@ -173,6 +180,23 @@ class Task(models.Model):
             return "tl"
         return None
     
+    @property
+    def assignee_name(self):
+        if self.assigned_to_id:
+            return self.assigned_to.name
+        if self.assigned_to_admin_id:
+            return self.assigned_to_admin.name
+        return None
+    
+    @property
+    def assignee_role(self):
+        """'employee' | 'admin' | None — who this task is actually assigned to."""
+        if self.assigned_to_id:
+            return "employee"
+        if self.assigned_to_admin_id:
+            return "admin"
+        return None
+    
     def forwards(apps, schema_editor):
         Task = apps.get_model("tasks", "Task")
         Task.objects.filter(assigned_by__isnull=False).update(assigned_by_admin=models.F("assigned_by"))
@@ -181,35 +205,33 @@ class TaskAttachment(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="attachments")
     file = models.ImageField(upload_to="task_attachments/%Y/%m/")
     uploaded_by = models.ForeignKey(Employee, on_delete=models.SET_NULL, null=True, blank=True)
+    uploaded_by_admin = models.ForeignKey(Admin, on_delete=models.SET_NULL, null=True, blank=True)  # NEW
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     class Meta:
         ordering = ["uploaded_at"]
-
 class TimerSession(models.Model):
-    """
-    One row per Start->Pause (or Start->Submit) interval. Never overwritten —
-    rework creates a NEW session on top of old ones, per the flowchart's
-    "Old and new sessions preserved" rule.
-    """
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="sessions")
-    employee = models.ForeignKey(Employee, on_delete=models.PROTECT, related_name="timer_sessions")
+    employee = models.ForeignKey(Employee, on_delete=models.PROTECT, related_name="timer_sessions", null=True, blank=True)
+    admin = models.ForeignKey(Admin, on_delete=models.PROTECT, related_name="timer_sessions_as_admin", null=True, blank=True)
     start_time = models.DateTimeField(auto_now_add=True)
     end_time = models.DateTimeField(null=True, blank=True)
     duration_seconds = models.PositiveIntegerField(null=True, blank=True)
-    is_rework_session = models.BooleanField(
-        default=False, help_text="True if this session was opened after a Rework Needed decision."
-    )
+    is_rework_session = models.BooleanField(default=False)
 
     class Meta:
         ordering = ["-start_time"]
-
-    def __str__(self):
-        return f"{self.task.task_id} session started {self.start_time}"
+        constraints = [
+            models.CheckConstraint(
+                condition=(   # ← was `check=` — renamed in Django 5.1+
+                    models.Q(employee__isnull=False, admin__isnull=True) |
+                    models.Q(employee__isnull=True, admin__isnull=False)
+                ),
+                name="timer_session_exactly_one_actor",
+            )
+        ]
 
     def close(self):
-        """Ends this session now and stores its duration. Does NOT touch the Task —
-        callers are responsible for calling task.recalc_total_time() afterward."""
         self.end_time = timezone.now()
         self.duration_seconds = int((self.end_time - self.start_time).total_seconds())
         self.save(update_fields=["end_time", "duration_seconds"])
@@ -266,11 +288,21 @@ class RecurringTaskDefinition(models.Model):
     class Frequency(models.TextChoices):
         DAILY = "daily", "Daily"   # room to add WEEKLY/WEEKDAYS_ONLY later
 
+    project_name = models.CharField(max_length=255, blank=True)   # NEW
     task_name = models.CharField(max_length=255)
     task_details = models.TextField(blank=True)
+    
+    # CHANGED — now optional; exactly one of these two is set (mirrors Task).
     assigned_to = models.ForeignKey(
-        Employee, on_delete=models.PROTECT, related_name="recurring_task_definitions"
+        Employee, on_delete=models.PROTECT, related_name="recurring_task_definitions",
+        null=True, blank=True,
     )
+    # NEW
+    assigned_to_admin = models.ForeignKey(
+        Admin, on_delete=models.PROTECT, related_name="recurring_task_definitions_as_admin",
+        null=True, blank=True,
+    )
+    
     priority = models.CharField(max_length=10, choices=Task.Priority.choices, default=Task.Priority.MEDIUM)
     allotted_time = models.DecimalField(max_digits=6, decimal_places=2)
 
@@ -297,3 +329,20 @@ class RecurringTaskDefinition(models.Model):
 
     def __str__(self):
         return f"{self.task_name} (daily, {self.start_date} → {self.end_date or 'ongoing'})"
+    
+     # NEW — mirrors Task.assignee_name / assignee_role
+    @property
+    def assignee_name(self):
+        if self.assigned_to_id:
+            return self.assigned_to.name
+        if self.assigned_to_admin_id:
+            return self.assigned_to_admin.name
+        return None
+
+    @property
+    def assignee_role(self):
+        if self.assigned_to_id:
+            return "employee"
+        if self.assigned_to_admin_id:
+            return "admin"
+        return None

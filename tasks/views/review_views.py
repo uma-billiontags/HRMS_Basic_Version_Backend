@@ -3,7 +3,7 @@
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
-from .utils import _is_admin, _current_employee, _can_review_task, _is_tl
+from .utils import _is_admin, _current_employee, _can_review_task, _is_tl, task_list_queryset
 from rest_framework import status
 from django.shortcuts import get_object_or_404
 from django.db import transaction
@@ -24,9 +24,11 @@ def get_review_tasks(request):
     if not _is_admin(request):
         return Response({"detail": "Only admins can view the review queue."}, status=status.HTTP_403_FORBIDDEN)
 
-    tasks = Task.objects.filter(
-        task_status__in=[Task.Status.SUBMITTED, Task.Status.RESUBMITTED, Task.Status.UNDER_REVIEW]
+    tasks = task_list_queryset().filter(
+        task_status__in=[Task.Status.SUBMITTED, Task.Status.RESUBMITTED, Task.Status.UNDER_REVIEW],
+        assigned_by_employee__isnull=True,
     )
+    
     return Response(TaskListSerializer(tasks, many=True).data)
 
 @api_view(["GET"])
@@ -43,7 +45,7 @@ def get_tl_review_tasks(request):
         return Response({"detail": "Team leads only."}, status=status.HTTP_403_FORBIDDEN)
 
     employee = _current_employee(request)
-    tasks = Task.objects.filter(
+    tasks = task_list_queryset().filter(
         assigned_by_employee=employee,
         task_status__in=[Task.Status.SUBMITTED, Task.Status.RESUBMITTED, Task.Status.UNDER_REVIEW],
     ).exclude(assigned_to=employee)
@@ -162,6 +164,6 @@ def get_rework_tasks(request):
     if not _is_admin(request):
         return Response({"detail": "Admin only."}, status=status.HTTP_403_FORBIDDEN)
 
-    tasks = Task.objects.filter(rework_count__gt=0)
+    tasks = task_list_queryset().filter(rework_count__gt=0).order_by("-reviewed_date")
 
-    return Response(TaskListSerializer(tasks.order_by("-reviewed_date"), many=True).data)
+    return Response(TaskListSerializer(tasks, many=True).data)

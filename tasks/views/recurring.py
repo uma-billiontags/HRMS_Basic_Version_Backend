@@ -4,7 +4,7 @@ from django.db.models import Max, Q
 from django.utils import timezone
 from tasks.models import Task, RecurringTaskDefinition
 from ..serializers import TaskListSerializer, RecurringTaskDefinitionSerializer, RecurringTaskDefinitionCreateSerializer
-from .utils import _is_admin, _current_employee, _is_tl, _can_manage_tasks
+from .utils import _is_admin, _current_employee, _is_tl, _can_manage_tasks, task_list_queryset
 
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -12,18 +12,7 @@ from rest_framework.response import Response
 from rest_framework import status
 from django.shortcuts import get_object_or_404
 
-
 def generate_recurring_tasks(as_of_date=None):
-    """
-    Call this before any task-listing query. Walks every active
-    RecurringTaskDefinition from wherever it last left off, up through
-    as_of_date (default: today) — so even if nobody opened the app for a
-    few days, the missed days get backfilled in one pass, never silently
-    dropped.
-
-    Idempotent: safe to call many times per day (get_or_create on the
-    (definition, date) pair means repeat calls are no-ops).
-    """
     as_of_date = as_of_date or timezone.localdate()
 
     defs = RecurringTaskDefinition.objects.filter(
@@ -34,19 +23,19 @@ def generate_recurring_tasks(as_of_date=None):
     for d in defs:
         last_generated = d.generated_tasks.aggregate(m=Max("generated_for_date"))["m"]
         cursor = (last_generated + timedelta(days=1)) if last_generated else d.start_date
-
-        # Never walk past today or past this definition's own end_date.
         walk_until = min(as_of_date, d.end_date) if d.end_date else as_of_date
 
         while cursor <= walk_until:
-            if cursor.weekday() in d.weekdays:   # ← changed: Mon=0 ... Sun=6
+            if cursor.weekday() in d.weekdays:
                 Task.objects.get_or_create(
                     recurring_source=d,
                     generated_for_date=cursor,
                     defaults=dict(
+                        project_name=d.project_name, 
                         task_name=d.task_name,
                         task_details=d.task_details,
                         assigned_to=d.assigned_to,
+                        assigned_to_admin=d.assigned_to_admin,   # NEW — carry the admin FK through too
                         priority=d.priority,
                         allotted_time=d.allotted_time,
                         due_date=cursor,
@@ -56,7 +45,7 @@ def generate_recurring_tasks(as_of_date=None):
                     ),
                 )
             cursor += timedelta(days=1)
-            
+
 # ── Recurring task definition views ────────────────────────────────────────
 # Create/list/stop recurring task definitions.
 
@@ -88,14 +77,13 @@ def get_my_recurring_tasks(request):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def create_recurring_task(request):
-    """
-    POST /api/tasks/recurring/create/
-    Creates the recurring rule AND immediately generates today's (and any
-    already-due) occurrence, so the employee sees it without waiting for
-    a scheduled job.
-    """
     if not _can_manage_tasks(request):
         return Response({"detail": "Only admins or team leads can create tasks."}, status=status.HTTP_403_FORBIDDEN)
+
+    # NEW — same rule as assign_task/create_and_assign_task: only a TL can hand
+    # a recurring task to an Admin.
+    if request.data.get("assigned_to_admin") and not _is_tl(request):
+        return Response({"detail": "Only team leads can assign a task to an admin."}, status=status.HTTP_403_FORBIDDEN)
 
     serializer = RecurringTaskDefinitionCreateSerializer(data=request.data)
     serializer.is_valid(raise_exception=True)
@@ -105,12 +93,9 @@ def create_recurring_task(request):
     else:
         definition = serializer.save(assigned_by_employee=request.user.instance)
 
-    # Generate immediately — don't make the employee wait for the next
-    # dashboard load elsewhere to see day 1.
     generate_recurring_tasks()
 
     return Response(RecurringTaskDefinitionSerializer(definition).data, status=status.HTTP_201_CREATED)
-
 
 def _owns_recurring_for_management(request, definition):
     """Admin: any rule. TL: only rules they personally created — same
@@ -143,31 +128,31 @@ def stop_recurring_task(request, pk):
 # ── Lazy-fallback hooks for the listing views ───────────────────────────────
 # tasks/views/task_crud.py — same file as get_all_tasks / get_my_tasks / get_tl_tasks
 
+# tasks/views/recurring.py
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_all_tasks(request):
-    generate_recurring_tasks()          # ← ADD THIS LINE
-    tasks = Task.objects.all()
+    generate_recurring_tasks()
+    tasks = task_list_queryset()
     return Response(TaskListSerializer(tasks, many=True).data)
-
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_my_tasks(request):
-    generate_recurring_tasks()          # ← ADD THIS LINE
+    generate_recurring_tasks()
     employee = _current_employee(request)
     if employee is None:
         return Response({"detail": "Employees only."}, status=status.HTTP_403_FORBIDDEN)
-    tasks = Task.objects.filter(assigned_to=employee)
+    tasks = task_list_queryset().filter(assigned_to=employee)
     return Response(TaskListSerializer(tasks, many=True).data)
 
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_tl_tasks(request):
-    generate_recurring_tasks()          # ← ADD THIS LINE
+    generate_recurring_tasks()
     if not _is_tl(request):
         return Response({"detail": "Team leads only."}, status=status.HTTP_403_FORBIDDEN)
     employee = _current_employee(request)
-    tasks = Task.objects.filter(assigned_by_employee=employee)
+    tasks = task_list_queryset().filter(assigned_by_employee=employee)
     return Response(TaskListSerializer(tasks, many=True).data)

@@ -6,7 +6,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
 from .serializers import LoginSerializer, AdminSerializer, EmployeeSerializer, EmployeeCredentialSerializer, EmployeeWriteSerializer
-from .models import AuthToken, Employee   
+from .models import AuthToken, Employee, Admin
 from django.shortcuts import get_object_or_404
 from django.db.models.deletion import ProtectedError
 
@@ -131,3 +131,57 @@ def delete_employee_credential(request, pk):
             {"detail": "This employee has tasks or timer history and can't be deleted. Consider deactivating instead."},
             status=status.HTTP_409_CONFLICT,
         )
+
+# accounts/views.py — add these
+
+from .serializers import AdminCredentialSerializer, AdminWriteSerializer  # add to existing import
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_all_admin_credentials(request):
+    """GET /api/auth/admins/ — Team Access Admin tab. Admin-only."""
+    if not _is_admin(request):
+        return Response({"detail": "Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    admins = Admin.objects.all().order_by("name")
+    return Response(AdminCredentialSerializer(admins, many=True).data)
+
+
+@api_view(["POST"])
+@permission_classes([IsAuthenticated])
+def create_admin_credential(request):
+    """POST /api/auth/admins/create/"""
+    if not _is_admin(request):
+        return Response({"detail": "Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    serializer = AdminWriteSerializer(data=request.data)
+    serializer.is_valid(raise_exception=True)
+    admin = serializer.save()
+    return Response(AdminCredentialSerializer(admin).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(["PATCH"])
+@permission_classes([IsAuthenticated])
+def edit_admin_credential(request, pk):
+    """PATCH /api/auth/admins/<id>/edit/"""
+    if not _is_admin(request):
+        return Response({"detail": "Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    admin = get_object_or_404(Admin, pk=pk)
+    serializer = AdminWriteSerializer(admin, data=request.data, partial=True)
+    serializer.is_valid(raise_exception=True)
+    admin = serializer.save()
+    return Response(AdminCredentialSerializer(admin).data)
+
+
+@api_view(["DELETE"])
+@permission_classes([IsAuthenticated])
+def delete_admin_credential(request, pk):
+    """DELETE /api/auth/admins/<id>/delete/"""
+    if not _is_admin(request):
+        return Response({"detail": "Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    if Admin.objects.count() <= 1:
+        return Response({"detail": "Can't delete the last remaining admin."}, status=status.HTTP_409_CONFLICT)
+    if request.user.role == "admin" and request.user.instance.pk == pk:
+        return Response({"detail": "You can't delete your own admin account."}, status=status.HTTP_409_CONFLICT)
+    admin = get_object_or_404(Admin, pk=pk)
+    admin.delete()
+    return Response({"detail": f'"{admin.name}" deleted.'}, status=status.HTTP_200_OK)

@@ -82,6 +82,9 @@ class EmployeeWriteSerializer(serializers.ModelSerializer):
             qs = qs.exclude(pk=self.instance.pk)
         if qs.exists():
             raise serializers.ValidationError("An employee with this email already exists.")
+        # ← NEW — cross-table check
+        if Admin.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("This email is already registered as an Admin.")
         return value
 
     def validate(self, attrs):
@@ -95,6 +98,65 @@ class EmployeeWriteSerializer(serializers.ModelSerializer):
         employee.set_password(raw_password)
         employee.save()
         return employee
+
+    def update(self, instance, validated_data):
+        raw_password = validated_data.pop("password", None)
+        for field, value in validated_data.items():
+            setattr(instance, field, value)
+        if raw_password:
+            instance.set_password(raw_password)
+        instance.save()
+        return instance
+    
+# accounts/serializers.py — add these
+
+class AdminCredentialSerializer(serializers.ModelSerializer):
+    """Used by the Team Access Admin tab — never exposes the password hash."""
+    class Meta:
+        model = Admin
+        fields = ["id", "name", "email", "is_active", "created_at"]
+
+
+class AdminWriteSerializer(serializers.ModelSerializer):
+    password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+
+    class Meta:
+        model = Admin
+        fields = ["id", "name", "email", "password", "is_active"]
+        extra_kwargs = {
+            "name": {"required": True},
+            "email": {"required": True},
+            "is_active": {"required": False},
+        }
+
+    def validate_name(self, value):
+        value = value.strip()
+        if not value:
+            raise serializers.ValidationError("Name cannot be blank.")
+        return value
+
+    def validate_email(self, value):
+        qs = Admin.objects.filter(email__iexact=value)
+        if self.instance:
+            qs = qs.exclude(pk=self.instance.pk)
+        if qs.exists():
+            raise serializers.ValidationError("An admin with this email already exists.")
+        # ← NEW — cross-table check
+        if Employee.objects.filter(email__iexact=value).exists():
+            raise serializers.ValidationError("This email is already registered as an Employee.")
+        return value
+
+    def validate(self, attrs):
+        if self.instance is None and not attrs.get("password"):
+            raise serializers.ValidationError({"password": "Password is required when creating a new admin."})
+        return attrs
+
+    def create(self, validated_data):
+        raw_password = validated_data.pop("password")
+        admin = Admin(**validated_data)
+        admin.set_password(raw_password)
+        admin.save()
+        return admin
 
     def update(self, instance, validated_data):
         raw_password = validated_data.pop("password", None)

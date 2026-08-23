@@ -1,7 +1,7 @@
 # tasks/serializers.py
 
 from rest_framework import serializers
-from .models import Task, TimerSession, TaskMaster, RecurringTaskDefinition, TaskAttachment
+from .models import Task, TimerSession, TaskMaster, RecurringTaskDefinition, TaskAttachment, CorrectionRequest
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError as DjangoValidationError
 
@@ -10,7 +10,8 @@ class TaskAttachmentSerializer(serializers.ModelSerializer):
     class Meta:
         model = TaskAttachment
         fields = ["id", "file", "uploaded_at"]
-        
+
+
 class TaskListSerializer(serializers.ModelSerializer):
     """
     Used for the task table. assigned_to_name / department_name / assigned_by_name
@@ -18,8 +19,12 @@ class TaskListSerializer(serializers.ModelSerializer):
     so we read it off whichever employee the task is currently assigned to.
     Uses SerializerMethodField (not a dotted `source=`) so unassigned tasks
     (assigned_to = None) don't blow up with an AttributeError.
+
+    assigned_to_name / assignee_role are now generic across the Employee OR
+    Admin assignee — see Task.assignee_name / Task.assignee_role.
     """
     assigned_to_name = serializers.SerializerMethodField()
+    assignee_role = serializers.SerializerMethodField()      # "employee" | "admin" | None
     created_by_role = serializers.SerializerMethodField()   # "admin" | "tl" — lets the UI badge TL-created tasks
     department_name = serializers.SerializerMethodField()
     assigned_by_name = serializers.SerializerMethodField()
@@ -30,7 +35,7 @@ class TaskListSerializer(serializers.ModelSerializer):
         model = Task
         fields = [
             "id", "task_id", "project_name", "task_name", "task_details",
-            "assigned_to", "assigned_to_name", "department_name",
+            "assigned_to", "assigned_to_admin", "assigned_to_name", "assignee_role", "department_name",
             "assigned_by_name",
             "priority", "assigned_date", "due_date", "allotted_time",
             "task_status", "total_time_taken", "remaining_or_over_time",
@@ -40,19 +45,26 @@ class TaskListSerializer(serializers.ModelSerializer):
         ]
 
     def get_assigned_to_name(self, obj):
-        return obj.assigned_to.name if obj.assigned_to_id else None
+        return obj.assignee_name
+
+    def get_assignee_role(self, obj):
+        return obj.assignee_role
 
     def get_department_name(self, obj):
+        # Admin assignees have no department — falls back to None -> "—" on the frontend.
         return obj.assigned_to.department if obj.assigned_to_id else None
 
     def get_assigned_by_name(self, obj):
         return obj.assigned_by_name
-    
+
     def get_created_by_role(self, obj):
         return obj.created_by_role
 
     def get_has_active_session(self, obj):
-        # Lets the frontend show "Timer running" without a second request.
+        # Falls back to a query only if the view forgot to use task_list_queryset()
+        # (shouldn't happen once every view is updated, but keeps this serializer safe).
+        if hasattr(obj, "_has_active_session"):
+            return obj._has_active_session
         return obj.sessions.filter(end_time__isnull=True).exists()
 
 
@@ -73,22 +85,41 @@ class TaskCreateSerializer(serializers.ModelSerializer):
 
 class TaskAssignSerializer(serializers.ModelSerializer):
     """
-    Step 2: assign / reassign. No `department` field here on purpose —
-    department is derived from whichever Employee is chosen as assigned_to.
+    Step 2: assign / reassign. Now supports assigning to either an Employee
+    (assigned_to) OR an Admin (assigned_to_admin) — exactly one must be set.
+    Whichever wins clears the other FK so a reassignment never leaves a
+    stale pointer behind.
     """
     class Meta:
         model = Task
-        fields = ["assigned_to", "priority", "due_date", "allotted_time"]
+        fields = ["assigned_to", "assigned_to_admin", "priority", "due_date", "allotted_time"]
         extra_kwargs = {
-            "assigned_to": {"required": True},
+            "assigned_to": {"required": False},
+            "assigned_to_admin": {"required": False},
             "priority": {"required": True},
             "due_date": {"required": True},
             "allotted_time": {"required": True},
         }
 
+    def validate(self, attrs):
+        assigned_to = attrs.get("assigned_to")
+        assigned_to_admin = attrs.get("assigned_to_admin")
+        if not assigned_to and not assigned_to_admin:
+            raise serializers.ValidationError("Assign this task to either an employee or an admin.")
+        if assigned_to and assigned_to_admin:
+            raise serializers.ValidationError("Assign to either an employee or an admin, not both.")
+        return attrs
+
+    def save(self, **kwargs):
+        if self.validated_data.get("assigned_to_admin"):
+            self.validated_data["assigned_to"] = None
+        elif self.validated_data.get("assigned_to"):
+            self.validated_data["assigned_to_admin"] = None
+        return super().save(**kwargs)
+
 
 class TimerSessionSerializer(serializers.ModelSerializer):
-    """Read-only — used to show an employee's session history for a task."""
+    """Read-only — used to show session history for a task."""
     class Meta:
         model = TimerSession
         fields = ["id", "start_time", "end_time", "duration_seconds", "is_rework_session"]
@@ -101,7 +132,7 @@ class TaskSubmitSerializer(serializers.Serializer):
     """
     task_sheet_link = serializers.CharField(required=True, allow_blank=False)
     employee_remarks = serializers.CharField(required=False, allow_blank=True, default="")
-    
+
     def validate_task_sheet_link(self, value):
         value = value.strip()
         validator = URLValidator(schemes=["http", "https"])
@@ -110,9 +141,7 @@ class TaskSubmitSerializer(serializers.Serializer):
         except DjangoValidationError:
             raise serializers.ValidationError("Enter a valid http:// or https:// URL.")
         return value
-    
-    
-# ── Add to tasks/serializers.py ───────────────────────────  ───────────────────
+
 
 class ReviewApproveSerializer(serializers.Serializer):
     quality_of_task = serializers.ChoiceField(choices=Task.Quality.choices)
@@ -122,10 +151,7 @@ class ReviewApproveSerializer(serializers.Serializer):
 
 class ReviewReworkSerializer(serializers.Serializer):
     admin_remarks = serializers.CharField(required=True, allow_blank=False)
-    
-# tasks/serializers.py — add this import and serializer
 
-from .models import Task, TimerSession, CorrectionRequest  # add CorrectionRequest to the existing import
 
 class CorrectionListSerializer(serializers.ModelSerializer):
     """Used by the pending/approved/rejected correction list screens."""
@@ -144,21 +170,24 @@ class CorrectionListSerializer(serializers.ModelSerializer):
 
     def get_decided_by_name(self, obj):
         return obj.decided_by.name if obj.decided_by_id else None
-    
+
+
 class TaskCreateAssignSerializer(serializers.ModelSerializer):
     """
     Combined create+assign in one shot. Same required fields as
     TaskAssignSerializer, plus task_name/task_details from TaskCreateSerializer.
-    Used by POST /api/tasks/create_and_assign/.
+    Used by POST /api/tasks/create_and_assign/. Supports assigning to either
+    an Employee or an Admin — see TaskAssignSerializer's validate()/save().
     """
     class Meta:
         model = Task
         fields = [
             "project_name", "task_name", "task_details",
-            "assigned_to", "priority", "due_date", "allotted_time",
+            "assigned_to", "assigned_to_admin", "priority", "due_date", "allotted_time",
         ]
         extra_kwargs = {
-            "assigned_to": {"required": True},
+            "assigned_to": {"required": False},
+            "assigned_to_admin": {"required": False},
             "priority": {"required": True},
             "due_date": {"required": True},
             "allotted_time": {"required": True},
@@ -168,6 +197,23 @@ class TaskCreateAssignSerializer(serializers.ModelSerializer):
         if not value.strip():
             raise serializers.ValidationError("Task name cannot be blank.")
         return value
+
+    def validate(self, attrs):
+        assigned_to = attrs.get("assigned_to")
+        assigned_to_admin = attrs.get("assigned_to_admin")
+        if not assigned_to and not assigned_to_admin:
+            raise serializers.ValidationError("Assign this task to either an employee or an admin.")
+        if assigned_to and assigned_to_admin:
+            raise serializers.ValidationError("Assign to either an employee or an admin, not both.")
+        return attrs
+
+    def save(self, **kwargs):
+        if self.validated_data.get("assigned_to_admin"):
+            self.validated_data["assigned_to"] = None
+        elif self.validated_data.get("assigned_to"):
+            self.validated_data["assigned_to_admin"] = None
+        return super().save(**kwargs)
+
 
 class TaskMasterSerializer(serializers.ModelSerializer):
     label = serializers.SerializerMethodField()
@@ -187,6 +233,7 @@ class TaskMasterSerializer(serializers.ModelSerializer):
             duration = f"{minutes}m"
         return f"{obj.task_name} - {duration}"
 
+
 class TaskMasterWriteSerializer(serializers.ModelSerializer):
     class Meta:
         model = TaskMaster
@@ -200,7 +247,7 @@ class TaskMasterWriteSerializer(serializers.ModelSerializer):
         if not value:
             raise serializers.ValidationError("Project name cannot be blank.")
         return value
-    
+
     def validate_task_name(self, value):
         value = value.strip()
         if not value:
@@ -223,23 +270,27 @@ class TaskMasterWriteSerializer(serializers.ModelSerializer):
                 {"default_hours": f'"{name}" with {hours}hr already exists in the catalog.'}
             )
         return attrs
-    
-# tasks/serializers.py — add these, and add RecurringTaskDefinition to the models import
+
 
 class RecurringTaskDefinitionSerializer(serializers.ModelSerializer):
     """Read view — used by the admin's recurring-tasks management screen."""
     assigned_to_name = serializers.SerializerMethodField()
+    assignee_role = serializers.SerializerMethodField()   # NEW — "employee" | "admin" | None
 
     class Meta:
         model = RecurringTaskDefinition
         fields = [
-            "id", "task_name", "task_details", "assigned_to", "assigned_to_name",
+            "id", "project_name", "task_name", "task_details",
+            "assigned_to", "assigned_to_admin", "assigned_to_name", "assignee_role",  # CHANGED
             "priority", "allotted_time", "frequency", "start_date", "end_date", "weekdays",
             "is_active", "created_at",
         ]
 
     def get_assigned_to_name(self, obj):
-        return obj.assigned_to.name if obj.assigned_to_id else None
+        return obj.assignee_name   # CHANGED — generic, not obj.assigned_to.name
+
+    def get_assignee_role(self, obj):
+        return obj.assignee_role
 
 
 class RecurringTaskDefinitionCreateSerializer(serializers.ModelSerializer):
@@ -248,14 +299,17 @@ class RecurringTaskDefinitionCreateSerializer(serializers.ModelSerializer):
         child=serializers.IntegerField(min_value=0, max_value=6),
         required=True,
     )
+
     class Meta:
         model = RecurringTaskDefinition
         fields = [
-            "task_name", "task_details", "assigned_to",
+            "project_name", "task_name", "task_details", "assigned_to", "assigned_to_admin",  # CHANGED
             "priority", "allotted_time", "start_date", "end_date", "weekdays",
         ]
         extra_kwargs = {
-            "assigned_to": {"required": True},
+            "project_name": {"required": False},   # optional, matches Task.project_name being blank=True
+            "assigned_to": {"required": False},        # CHANGED — was required=True
+            "assigned_to_admin": {"required": False},   # NEW
             "priority": {"required": True},
             "allotted_time": {"required": True},
             "start_date": {"required": True},
@@ -271,4 +325,20 @@ class RecurringTaskDefinitionCreateSerializer(serializers.ModelSerializer):
         start_date = attrs.get("start_date")
         if end_date and start_date and end_date < start_date:
             raise serializers.ValidationError({"end_date": "End date can't be before start date."})
+
+        # NEW — same exactly-one-of pattern as TaskAssignSerializer
+        assigned_to = attrs.get("assigned_to")
+        assigned_to_admin = attrs.get("assigned_to_admin")
+        if not assigned_to and not assigned_to_admin:
+            raise serializers.ValidationError("Assign this recurring task to either an employee or an admin.")
+        if assigned_to and assigned_to_admin:
+            raise serializers.ValidationError("Assign to either an employee or an admin, not both.")
         return attrs
+
+    def save(self, **kwargs):
+        # NEW — whichever wins clears the other FK
+        if self.validated_data.get("assigned_to_admin"):
+            self.validated_data["assigned_to"] = None
+        elif self.validated_data.get("assigned_to"):
+            self.validated_data["assigned_to_admin"] = None
+        return super().save(**kwargs)

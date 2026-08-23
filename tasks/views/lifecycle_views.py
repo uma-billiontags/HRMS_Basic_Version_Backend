@@ -14,7 +14,6 @@ from ..models import Task
 from ..serializers import ( TaskListSerializer )
 
 
-
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def hold_task(request, pk):
@@ -45,6 +44,10 @@ def release_hold(request, pk):
 
     with transaction.atomic():
         restored = task.status_before_hold or Task.Status.NOT_STARTED
+        
+        if restored == Task.Status.IN_PROGRESS:
+            restored = Task.Status.PAUSED
+            
         task.task_status = restored
         task.status_before_hold = ""
         task.save(update_fields=["task_status", "status_before_hold"])
