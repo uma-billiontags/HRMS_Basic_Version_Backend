@@ -59,8 +59,13 @@ def start_task(request, pk):
 
     with transaction.atomic():
         owner_filter = {"employee": actor} if kind == "employee" else {"admin": actor}
-        if TimerSession.objects.select_for_update().filter(end_time__isnull=True, **owner_filter).exists():
+        
+        # ✅ FIX: Exclude THIS task so an orphaned session on the same task doesn't block it
+        if TimerSession.objects.select_for_update().filter(end_time__isnull=True, **owner_filter).exclude(task=task).exists():
             return Response({"detail": "You already have an active timer running on another task. Pause or submit it first."}, status=status.HTTP_409_CONFLICT)
+
+        # ✅ FIX: If there was a leftover open session on this task, close it cleanly
+        task.sessions.filter(end_time__isnull=True, **owner_filter).update(end_time=timezone_now())
 
         session_kwargs = {"task": task, **owner_filter}
         TimerSession.objects.create(**session_kwargs)
@@ -69,7 +74,6 @@ def start_task(request, pk):
         log_activity(task, request.user, ActivityLog.Action.STARTED, from_status="not_started", to_status="in_progress")
 
     return Response(TaskListSerializer(task).data)
-
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
@@ -117,9 +121,10 @@ def resume_task(request, pk):
 
     with transaction.atomic():
         owner_filter = {"employee": actor} if kind == "employee" else {"admin": actor}
-        if TimerSession.objects.select_for_update().filter(end_time__isnull=True, **owner_filter).exists():
+                # In resume_task:
+        if TimerSession.objects.select_for_update().filter(end_time__isnull=True, **owner_filter).exclude(task=task).exists():
             return Response({"detail": "You already have an active timer running on another task. Pause or submit it first."}, status=status.HTTP_409_CONFLICT)
-
+        
         from_status = task.task_status
         session = TimerSession.objects.create(
             task=task, is_rework_session=(task.task_status == Task.Status.REWORK_NEEDED), **owner_filter

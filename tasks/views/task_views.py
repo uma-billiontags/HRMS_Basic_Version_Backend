@@ -49,9 +49,29 @@ def assign_task(request, pk):
 
     serializer = TaskAssignSerializer(task, data=request.data, partial=True)
     serializer.is_valid(raise_exception=True)
-    task = serializer.save(task_status=Task.Status.NOT_STARTED)
-    return Response(TaskListSerializer(task).data)
 
+    new_employee = serializer.validated_data.get("assigned_to")
+    new_admin = serializer.validated_data.get("assigned_to_admin")
+
+    # Check if the assignee was actually changed to someone else
+    assignee_changed = (
+        ("assigned_to" in serializer.validated_data and new_employee != task.assigned_to) or
+        ("assigned_to_admin" in serializer.validated_data and new_admin != task.assigned_to_admin)
+    )
+
+    with transaction.atomic():
+        if assignee_changed:
+            # If reassigned to a different person, close any running timer first
+            open_session = task.sessions.filter(end_time__isnull=True).first()
+            if open_session:
+                open_session.close()
+                task.recalc_total_time()
+            task = serializer.save(task_status=Task.Status.NOT_STARTED)
+        else:
+            # If only details (due date, priority, hours) changed, PRESERVE current task_status
+            task = serializer.save()
+
+    return Response(TaskListSerializer(task).data)
 
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
