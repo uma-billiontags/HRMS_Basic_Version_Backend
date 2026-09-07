@@ -69,6 +69,8 @@ urlpatterns = [
     path("recurring/mine/", views.get_my_recurring_tasks, name="recurring-mine"),   # ← ADDED
     path("recurring/create/", views.create_recurring_task, name="recurring-create"),
     path("recurring/<int:pk>/stop/", views.stop_recurring_task, name="recurring-stop"),
+    path("recurring/<int:pk>/toggle_date/", views.toggle_recurring_date, name="recurring-toggle-date"),  # <-- ADD THIS
+    path("recurring/assigned_to_me/", views.get_assigned_recurring_tasks, name="recurring-assigned-to-me"),
     
     path("reports/rating_trends/", views.get_employee_rating_trends, name="reports-rating-trends"),
     

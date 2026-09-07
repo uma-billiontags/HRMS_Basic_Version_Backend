@@ -37,7 +37,7 @@ class TaskListSerializer(serializers.ModelSerializer):
             "id", "task_id", "project_name", "task_name", "task_details",
             "assigned_to", "assigned_to_admin", "assigned_to_name", "assignee_role", "department_name",
             "assigned_by_name",
-            "priority", "assigned_date", "due_date", "allotted_time",
+            "priority", "start_date", "assigned_date", "due_date", "allotted_time",
             "task_status", "total_time_taken", "remaining_or_over_time",
             "task_sheet_link", "employee_remarks", "submitted_date",
             "quality_of_task", "rating", "admin_remarks", "reviewed_date",
@@ -92,7 +92,7 @@ class TaskAssignSerializer(serializers.ModelSerializer):
     """
     class Meta:
         model = Task
-        fields = ["assigned_to", "assigned_to_admin", "priority", "due_date", "allotted_time"]
+        fields = ["assigned_to", "assigned_to_admin", "priority", "start_date", "due_date", "allotted_time"]
         extra_kwargs = {
             "assigned_to": {"required": False},
             "assigned_to_admin": {"required": False},
@@ -283,6 +283,7 @@ class RecurringTaskDefinitionSerializer(serializers.ModelSerializer):
             "id", "project_name", "task_name", "task_details",
             "assigned_to", "assigned_to_admin", "assigned_to_name", "assignee_role",  # CHANGED
             "priority", "allotted_time", "frequency", "start_date", "end_date", "weekdays",
+            "excluded_dates",  # <-- ADD THIS
             "is_active", "created_at",
         ]
 

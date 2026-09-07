@@ -59,6 +59,7 @@ class Task(models.Model):
     )
     
     priority = models.CharField(max_length=10, choices=Priority.choices, default=Priority.MEDIUM)
+    start_date = models.DateField(null=True, blank=True, help_text="Date when task becomes active")  # <-- ADD THIS
     assigned_date = models.DateField(auto_now_add=True)
     due_date = models.DateField(null=True, blank=True)
     allotted_time = models.DecimalField(
@@ -310,7 +311,15 @@ class RecurringTaskDefinition(models.Model):
     weekdays = models.JSONField(
         default=list,
         help_text="Python weekday ints this task should run on: Mon=0 ... Sun=6",
-    )    
+    )   
+    
+    # ADD THIS FIELD:
+    excluded_dates = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="List of ISO date strings (YYYY-MM-DD) to skip/exclude from generation",
+    )
+     
     start_date = models.DateField()
     end_date = models.DateField(null=True, blank=True)  # blank = runs until manually stopped
 
