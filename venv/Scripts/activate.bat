@@ -8,7 +8,7 @@ if defined _OLD_CODEPAGE (
     "%SystemRoot%\System32\chcp.com" 65001 > nul
 )
 
-set "VIRTUAL_ENV=C:\Users\HP\Documents\Task_HRMS\backend\venv"
+set "VIRTUAL_ENV=C:\Users\HP\Documents\Task_HRMS_2\HRMS_Basic_Version_Backend\venv"
 
 if not defined PROMPT set PROMPT=$P$G
 
