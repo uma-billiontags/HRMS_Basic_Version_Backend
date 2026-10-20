@@ -10,6 +10,8 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     path("api/auth/", include("accounts.urls")),
     path("api/tasks/", include("tasks.urls")),
+    path("api/attendance/", include("attendance.urls")),
+    path("api/requests/", include("leave_requests.urls")),
 ]
 
 # Serve media files in BOTH development and production

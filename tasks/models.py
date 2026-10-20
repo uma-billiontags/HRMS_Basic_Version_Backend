@@ -5,6 +5,31 @@ from django.utils import timezone
 from accounts.models import Admin, Employee
 
 
+import re
+
+def get_department_prefix(department_name: str) -> str:
+    """
+    Computes prefix from department name:
+      - Single word: First letter only ('Finance' -> 'F', 'Campaign' -> 'C')
+      - Multi-word: First letter of each word ('Creative Design' -> 'CD', 'Finance & Compliance' -> 'FC')
+    """
+    if not department_name:
+        return "GEN"
+
+    # Extract all alphanumeric words, ignoring '&', '-', '/', etc.
+    words = re.findall(r'[A-Za-z0-9]+', department_name)
+    meaningful = [w for w in words if w.lower() not in ('and', 'of', 'the')]
+    if not meaningful:
+        meaningful = words
+
+    if len(meaningful) >= 2:
+        # Multi-word: take first letter of each word (e.g. CD, BD, FC)
+        return "".join(w[0].upper() for w in meaningful)
+    
+    # Single-word: take ONLY the 1st letter (e.g. 'Finance' -> 'F', 'Campaign' -> 'C')
+    return meaningful[0][0].upper()
+
+
 class Task(models.Model):
     class Priority(models.TextChoices):
         LOW = "low", "Low"
@@ -33,6 +58,11 @@ class Task(models.Model):
 
     # ── System-generated identifier, e.g. "TASK-001" ──────────────────────
     task_id = models.CharField(max_length=20, unique=True, editable=False, blank=True)
+    
+    # ── NEW: Department-specific sub task id (e.g. F-1, PT-1) ───────────
+    sub_task_id = models.CharField(max_length=30, blank=True, null=True, db_index=True)
+    
+    department = models.CharField(max_length=100, blank=True)
 
     # ── Admin fields (set when creating/editing the task) ─────────────────
     project_name = models.CharField(max_length=255, blank=True)   # ← NEW
@@ -62,6 +92,8 @@ class Task(models.Model):
     start_date = models.DateField(null=True, blank=True, help_text="Date when task becomes active")  # <-- ADD THIS
     assigned_date = models.DateField(auto_now_add=True)
     due_date = models.DateField(null=True, blank=True)
+    due_time = models.TimeField(null=True, blank=True, help_text="Deadline time (e.g. 15:00:00)")
+
     allotted_time = models.DecimalField(
         max_digits=6, decimal_places=2, null=True, blank=True,
         help_text="Allotted time in hours",
@@ -136,13 +168,67 @@ class Task(models.Model):
     def __str__(self):
         return f"{self.task_id} — {self.task_name}"
 
+    # def save(self, *args, **kwargs):
+    #     is_new = self._state.adding
+    #     super().save(*args, **kwargs)
+    #     if is_new and not self.task_id:
+    #         self.task_id = f"TASK-{self.pk:03d}"
+    #         super().save(update_fields=["task_id"])
+    
     def save(self, *args, **kwargs):
         is_new = self._state.adding
         super().save(*args, **kwargs)
-        if is_new and not self.task_id:
-            self.task_id = f"TASK-{self.pk:03d}"
-            super().save(update_fields=["task_id"])
 
+        update_fields = []
+
+        # 1. Global Task ID: TASK-1, TASK-2, TASK-3
+        if not self.task_id:
+            self.task_id = f"TASK-{self.pk}"
+            update_fields.append("task_id")
+
+        # Admin tasks must have no department
+        if self.assigned_to_admin_id and self.department:
+            self.department = ""
+            update_fields.append("department")
+
+        # 2. Capture department from assigned employee (if employee task)
+        if not self.department and self.assigned_to and self.assigned_to.department:
+            self.department = self.assigned_to.department
+            update_fields.append("department")
+
+        # 3. Department or Admin Sub Task ID (ADMIN-1, F-1, CD-1, PT-1)
+        if not self.sub_task_id:
+            prefix = None
+
+            # IF assigned to Admin -> Prefix is "ADMIN"
+            if self.assigned_to_admin_id:
+                prefix = "ADMIN"
+            # IF assigned to Employee with department -> Prefix from department
+            elif self.department:
+                prefix = get_department_prefix(self.department)
+
+            if prefix:
+                # Find the highest existing sequence number for this prefix
+                last_task = (
+                    Task.objects
+                    .filter(sub_task_id__startswith=f"{prefix}-")
+                    .exclude(pk=self.pk)
+                    .order_by("-id")
+                    .first()
+                )
+
+                next_num = 1
+                if last_task and last_task.sub_task_id:
+                    match = re.search(rf"^{re.escape(prefix)}-(\d+)$", last_task.sub_task_id)
+                    if match:
+                        next_num = int(match.group(1)) + 1
+
+                self.sub_task_id = f"{prefix}-{next_num}"
+                update_fields.append("sub_task_id")
+
+        if update_fields:
+            super().save(update_fields=update_fields)
+            
     def recalc_total_time(self):
         """
         Total time = sum of every CLOSED session's duration, in hours.
@@ -231,6 +317,33 @@ class TimerSession(models.Model):
                 name="timer_session_exactly_one_actor",
             )
         ]
+
+    def close(self):
+        self.end_time = timezone.now()
+        self.duration_seconds = int((self.end_time - self.start_time).total_seconds())
+        self.save(update_fields=["end_time", "duration_seconds"])
+
+
+class TaskPauseLog(models.Model):
+    class PauseType(models.TextChoices):
+        BREAK = "break", "Break"
+        ANOTHER_REASON = "another_reason", "Another Reason"
+
+    task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="pause_logs")
+    employee = models.ForeignKey(Employee, null=True, blank=True, on_delete=models.SET_NULL, related_name="pause_logs")
+    admin = models.ForeignKey(Admin, null=True, blank=True, on_delete=models.SET_NULL, related_name="pause_logs_as_admin")
+
+    pause_type = models.CharField(max_length=20, choices=PauseType.choices, default=PauseType.BREAK)
+    break_option = models.CharField(max_length=50, blank=True)  # "15_mins", "30_mins"
+    break_duration_minutes = models.PositiveIntegerField(null=True, blank=True)  # 15 or 30
+    reason = models.TextField(blank=True)
+
+    start_time = models.DateTimeField(auto_now_add=True)
+    end_time = models.DateTimeField(null=True, blank=True)
+    duration_seconds = models.PositiveIntegerField(null=True, blank=True)
+
+    class Meta:
+        ordering = ["-start_time"]
 
     def close(self):
         self.end_time = timezone.now()

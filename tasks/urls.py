@@ -55,6 +55,8 @@ urlpatterns = [
     # ── Reports ───────────────────────────────────────────────────────────
     path("reports/admin/", views.get_admin_reports, name="reports-admin"),
     path("reports/employee/", views.get_my_reports, name="reports-employee"),
+    path("reports/daily_timeline/", views.get_daily_timeline, name="reports-daily-timeline"),
+    path("reports/assigned_hours_tracking/", views.get_assigned_hours_tracking, name="reports-assigned-hours-tracking"),
 
     # ── Task Master (reusable task catalog) ──────────────────────────────
     path("task_master/", views.get_task_master_list, name="task-master-list"),         # dropdown source, active-only

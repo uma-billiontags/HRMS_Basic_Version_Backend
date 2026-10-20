@@ -58,6 +58,8 @@ INSTALLED_APPS = [
 
     'accounts',
     'tasks',
+    'attendance',
+    'leave_requests',
 
 ]
 
@@ -163,11 +165,25 @@ AUTH_PASSWORD_VALIDATORS = []
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+TIME_ZONE = 'Asia/Kolkata'
 
 USE_I18N = True
 
 USE_TZ = True
+
+# Configure SMTP through environment variables in deployment. The console
+# backend is only used for local development when EMAIL_HOST is not set.
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", "587"))
+EMAIL_HOST_USER = os.environ.get("EMAIL_HOST_USER", "")
+EMAIL_HOST_PASSWORD = os.environ.get("EMAIL_HOST_PASSWORD", "")
+EMAIL_USE_TLS = os.environ.get("EMAIL_USE_TLS", "True") == "True"
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", EMAIL_HOST_USER or "hrms@localhost")
+PUBLIC_API_URL = os.environ.get("PUBLIC_API_URL", "").rstrip("/")
+EMAIL_BACKEND = (
+    "django.core.mail.backends.smtp.EmailBackend" if EMAIL_HOST
+    else "django.core.mail.backends.console.EmailBackend"
+)
 
 
 # Static files (CSS, JavaScript, Images)
@@ -180,11 +196,41 @@ STATIC_ROOT = BASE_DIR / 'staticfiles'   # collectstatic dumps everything here
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
-STORAGES = {
-    "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
-    },
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    },
-}
+# STORAGES = {
+#     "default": {
+#         "BACKEND": "django.core.files.storage.FileSystemStorage",
+#     },
+#     "staticfiles": {
+#         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+#     },
+# }
+
+USE_S3_STORAGE = os.getenv("USE_S3_STORAGE", "False").lower() in ("true", "1")
+
+if USE_S3_STORAGE:
+    STORAGES = {
+        "default": {
+            "BACKEND": "storages.backends.s3.S3Storage",
+            "OPTIONS": {
+                "access_key": os.getenv("SUPABASE_STORAGE_ACCESS_KEY"),
+                "secret_key": os.getenv("SUPABASE_STORAGE_SECRET_KEY"),
+                "bucket_name": os.getenv("SUPABASE_STORAGE_BUCKET", "hrms-media"),
+                "region_name": os.getenv("SUPABASE_STORAGE_REGION", "ap-southeast-1"),
+                "endpoint_url": f"https://{os.getenv('SUPABASE_PROJECT_ID')}.supabase.co/storage/v1/s3",
+                "default_acl": "public-read",
+                "querystring_auth": False,  # Generates clean, permanent public URLs without expiring tokens
+            },
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }
+else:
+    STORAGES = {
+        "default": {
+            "BACKEND": "django.core.files.storage.FileSystemStorage",
+        },
+        "staticfiles": {
+            "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+        },
+    }

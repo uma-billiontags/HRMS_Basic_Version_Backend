@@ -55,6 +55,7 @@ def get_my_activity(request):
 def _activity_to_dict(log):
     return {
         "id": log.id,
+        "sub_task_id": log.task.sub_task_id,
         "task_id": log.task.task_id,
         "task_name": log.task.task_name,
         "actor_name": log.actor_name,

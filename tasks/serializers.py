@@ -34,10 +34,10 @@ class TaskListSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = [
-            "id", "task_id", "project_name", "task_name", "task_details",
+            "id", "task_id", "sub_task_id", "department", "project_name", "task_name", "task_details",
             "assigned_to", "assigned_to_admin", "assigned_to_name", "assignee_role", "department_name",
             "assigned_by_name",
-            "priority", "start_date", "assigned_date", "due_date", "allotted_time",
+            "priority", "start_date", "assigned_date", "due_date", "due_time", "allotted_time",
             "task_status", "total_time_taken", "remaining_or_over_time",
             "task_sheet_link", "employee_remarks", "submitted_date",
             "quality_of_task", "rating", "admin_remarks", "reviewed_date",
@@ -51,7 +51,12 @@ class TaskListSerializer(serializers.ModelSerializer):
         return obj.assignee_role
 
     def get_department_name(self, obj):
-        # Admin assignees have no department — falls back to None -> "—" on the frontend.
+        # Admin tasks have no department
+        if obj.assigned_to_admin_id:
+            return None
+        # Prefer task's explicit department if set, else fallback to assigned employee's department
+        if obj.department:
+            return obj.department
         return obj.assigned_to.department if obj.assigned_to_id else None
 
     def get_assigned_by_name(self, obj):
@@ -113,6 +118,8 @@ class TaskAssignSerializer(serializers.ModelSerializer):
     def save(self, **kwargs):
         if self.validated_data.get("assigned_to_admin"):
             self.validated_data["assigned_to"] = None
+            if hasattr(self, "instance") and self.instance:
+                self.instance.department = ""
         elif self.validated_data.get("assigned_to"):
             self.validated_data["assigned_to_admin"] = None
         return super().save(**kwargs)
@@ -182,8 +189,8 @@ class TaskCreateAssignSerializer(serializers.ModelSerializer):
     class Meta:
         model = Task
         fields = [
-            "project_name", "task_name", "task_details",
-            "assigned_to", "assigned_to_admin", "priority", "due_date", "allotted_time",
+            "project_name", "task_name", "task_details", "department",
+            "assigned_to", "assigned_to_admin", "priority", "due_date", "due_time", "allotted_time",
         ]
         extra_kwargs = {
             "assigned_to": {"required": False},
@@ -201,15 +208,24 @@ class TaskCreateAssignSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         assigned_to = attrs.get("assigned_to")
         assigned_to_admin = attrs.get("assigned_to_admin")
+        department = attrs.get("department")
         if not assigned_to and not assigned_to_admin:
             raise serializers.ValidationError("Assign this task to either an employee or an admin.")
         if assigned_to and assigned_to_admin:
             raise serializers.ValidationError("Assign to either an employee or an admin, not both.")
+        if assigned_to and department:
+            if assigned_to.department and assigned_to.department.strip().lower() != department.strip().lower():
+                raise serializers.ValidationError(
+                    f"Employee '{assigned_to.name}' belongs to department '{assigned_to.department}', not '{department}'."
+                )
+        if assigned_to_admin:
+            attrs["department"] = ""
         return attrs
 
     def save(self, **kwargs):
         if self.validated_data.get("assigned_to_admin"):
             self.validated_data["assigned_to"] = None
+            self.validated_data["department"] = ""
         elif self.validated_data.get("assigned_to"):
             self.validated_data["assigned_to_admin"] = None
         return super().save(**kwargs)

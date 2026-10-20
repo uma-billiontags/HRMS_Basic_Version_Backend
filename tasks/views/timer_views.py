@@ -8,7 +8,7 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from accounts.models import Employee
-from ..models import Task, TimerSession, TaskAttachment
+from ..models import Task, TimerSession, TaskAttachment, TaskPauseLog
 from ..activity import ActivityLog, log_activity
 from django.db import transaction
 from ..activity import ActivityLog, log_activity
@@ -24,7 +24,7 @@ from .utils import _is_admin, _current_task_actor, _is_task_assignee, timezone_n
 def get_active_session(request):
     kind, actor = _current_task_actor(request)
     if actor is None:
-        return Response({"active": False, "task": None, "task_name": None, "session": None})
+        return Response({"active": False, "task": None, "task_name": None, "session": None, "active_pause": None})
 
     owner_filter = {"employee": actor} if kind == "employee" else {"admin": actor}
     session = (
@@ -32,14 +32,32 @@ def get_active_session(request):
         .select_related("task")
         .first()
     )
-    if not session:
-        return Response({"active": False, "task": None, "task_name": None, "session": None})
+
+    active_pause = (
+        TaskPauseLog.objects.filter(end_time__isnull=True, **owner_filter)
+        .select_related("task")
+        .first()
+    )
+
+    pause_data = None
+    if active_pause:
+        pause_data = {
+            "id": active_pause.id,
+            "task": active_pause.task_id,
+            "task_name": active_pause.task.task_name,
+            "pause_type": active_pause.pause_type,
+            "break_option": active_pause.break_option,
+            "break_duration_minutes": active_pause.break_duration_minutes,
+            "reason": active_pause.reason,
+            "start_time": active_pause.start_time.isoformat(),
+        }
 
     return Response({
-        "active": True,
-        "task": session.task_id,
-        "task_name": session.task.task_name,
-        "session": TimerSessionSerializer(session).data,
+        "active": bool(session),
+        "task": session.task_id if session else None,
+        "task_name": session.task.task_name if session else None,
+        "session": TimerSessionSerializer(session).data if session else None,
+        "active_pause": pause_data,
     })
 
 
@@ -66,6 +84,7 @@ def start_task(request, pk):
 
         # ✅ FIX: If there was a leftover open session on this task, close it cleanly
         task.sessions.filter(end_time__isnull=True, **owner_filter).update(end_time=timezone_now())
+        TaskPauseLog.objects.filter(end_time__isnull=True, **owner_filter).update(end_time=timezone_now())
 
         session_kwargs = {"task": task, **owner_filter}
         TimerSession.objects.create(**session_kwargs)
@@ -91,18 +110,62 @@ def pause_task(request, pk):
     if not session:
         return Response({"detail": "There's no active timer session to pause."}, status=status.HTTP_400_BAD_REQUEST)
 
+    pause_type = request.data.get("pause_type", "break")
+    break_option = request.data.get("break_option", "")
+    break_duration_minutes = request.data.get("break_duration_minutes")
+    reason = request.data.get("reason", "").strip()
+
+    if not reason:
+        if break_option == "15_mins" or break_duration_minutes == 15:
+            reason = "15 Mins Refreshment Break"
+            break_duration_minutes = 15
+        elif break_option == "30_mins" or break_duration_minutes == 30:
+            reason = "30 Mins Lunch Break"
+            break_duration_minutes = 30
+        else:
+            reason = "Break" if pause_type == "break" else "Paused"
+
     with transaction.atomic():
         session.close()
         task.task_status = Task.Status.PAUSED
         task.save(update_fields=["task_status"])
         task.recalc_total_time()
+
+        # Close any previous open pause log for this actor
+        TaskPauseLog.objects.filter(end_time__isnull=True, **owner_filter).update(end_time=timezone_now())
+
+        pause_log = TaskPauseLog.objects.create(
+            task=task,
+            pause_type=pause_type,
+            break_option=break_option,
+            break_duration_minutes=break_duration_minutes,
+            reason=reason,
+            **owner_filter,
+        )
+
         log_activity(
             task, request.user, ActivityLog.Action.PAUSED,
             from_status="in_progress", to_status="paused",
-            details={"session_id": session.id, "duration_seconds": session.duration_seconds},
+            details={
+                "session_id": session.id,
+                "duration_seconds": session.duration_seconds,
+                "pause_type": pause_type,
+                "break_option": break_option,
+                "break_duration_minutes": break_duration_minutes,
+                "reason": reason,
+            },
         )
 
-    return Response(TaskListSerializer(task).data)
+    data = TaskListSerializer(task).data
+    data["active_pause"] = {
+        "id": pause_log.id,
+        "pause_type": pause_log.pause_type,
+        "break_option": pause_log.break_option,
+        "break_duration_minutes": pause_log.break_duration_minutes,
+        "reason": pause_log.reason,
+        "start_time": pause_log.start_time.isoformat(),
+    }
+    return Response(data)
 
 
 @api_view(["POST"])
@@ -121,10 +184,16 @@ def resume_task(request, pk):
 
     with transaction.atomic():
         owner_filter = {"employee": actor} if kind == "employee" else {"admin": actor}
-                # In resume_task:
         if TimerSession.objects.select_for_update().filter(end_time__isnull=True, **owner_filter).exclude(task=task).exists():
             return Response({"detail": "You already have an active timer running on another task. Pause or submit it first."}, status=status.HTTP_409_CONFLICT)
         
+        # Close any open pause logs for this task & actor
+        open_pauses = TaskPauseLog.objects.filter(end_time__isnull=True, **owner_filter)
+        pause_duration = 0
+        for p in open_pauses:
+            p.close()
+            pause_duration = p.duration_seconds or 0
+
         from_status = task.task_status
         session = TimerSession.objects.create(
             task=task, is_rework_session=(task.task_status == Task.Status.REWORK_NEEDED), **owner_filter
@@ -134,7 +203,11 @@ def resume_task(request, pk):
         log_activity(
             task, request.user, ActivityLog.Action.RESUMED,
             from_status=from_status, to_status="in_progress",
-            details={"session_id": session.id, "is_rework_session": session.is_rework_session},
+            details={
+                "session_id": session.id,
+                "is_rework_session": session.is_rework_session,
+                "pause_duration_seconds": pause_duration,
+            },
         )
 
     return Response(TaskListSerializer(task).data)
@@ -163,6 +236,9 @@ def submit_task(request, pk):
         open_session = TimerSession.objects.filter(task=task, end_time__isnull=True, **owner_filter).first()
         if open_session:
             open_session.close()
+
+        # Close any open pause log
+        TaskPauseLog.objects.filter(task=task, end_time__isnull=True, **owner_filter).update(end_time=timezone_now())
 
         from_status = task.task_status
         task.task_sheet_link = serializer.validated_data["task_sheet_link"]

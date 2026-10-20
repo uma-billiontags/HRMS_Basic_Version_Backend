@@ -46,7 +46,7 @@ class AuthToken(models.Model):
     Our own lightweight token table, since DRF's built-in Token model
     expects a single AUTH_USER_MODEL — we have two separate tables instead.
     Exactly one of admin/employee is set per row.
-    """
+    """ 
     key = models.CharField(max_length=64, unique=True, editable=False)
     admin = models.ForeignKey(Admin, null=True, blank=True, on_delete=models.CASCADE)
     employee = models.ForeignKey(Employee, null=True, blank=True, on_delete=models.CASCADE)

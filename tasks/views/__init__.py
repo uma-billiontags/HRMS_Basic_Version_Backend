@@ -23,7 +23,8 @@ from .activity_views import (
     get_all_activity, get_my_activity,
 )
 from .report_views import (
-    get_admin_reports, get_my_reports, get_employee_rating_trends
+    get_admin_reports, get_my_reports, get_employee_rating_trends, get_daily_timeline,
+    get_assigned_hours_tracking,
 )
 from .task_master_views import (
     get_task_master_list, get_all_task_master, create_task_master,
