@@ -55,6 +55,7 @@ INSTALLED_APPS = [
     'corsheaders',
     'rest_framework',
     # 'rest_framework.authtoken',  # required for Token auth
+    'storages',
 
     'accounts',
     'tasks',
@@ -208,17 +209,33 @@ MEDIA_ROOT = BASE_DIR / 'media'
 USE_S3_STORAGE = os.getenv("USE_S3_STORAGE", "False").lower() in ("true", "1")
 
 if USE_S3_STORAGE:
+    # Resolve Supabase domains directly to Cloudflare Anycast IP to prevent
+    # ISP DNS poisoning / IT Act block page (e.g. 202.83.24.75) on local development networks.
+    import socket
+    _orig_getaddrinfo = socket.getaddrinfo
+
+    def _supabase_dns_resolver(host, port, *args, **kwargs):
+        if isinstance(host, str) and (host.endswith(".supabase.co") or host == "supabase.co"):
+            return _orig_getaddrinfo("104.18.38.10", port, *args, **kwargs)
+        return _orig_getaddrinfo(host, port, *args, **kwargs)
+
+    socket.getaddrinfo = _supabase_dns_resolver
+
+    _supabase_project_id = os.getenv("SUPABASE_PROJECT_ID", "")
+    _supabase_bucket = os.getenv("SUPABASE_STORAGE_BUCKET", "hrms-media")
     STORAGES = {
         "default": {
             "BACKEND": "storages.backends.s3.S3Storage",
             "OPTIONS": {
                 "access_key": os.getenv("SUPABASE_STORAGE_ACCESS_KEY"),
                 "secret_key": os.getenv("SUPABASE_STORAGE_SECRET_KEY"),
-                "bucket_name": os.getenv("SUPABASE_STORAGE_BUCKET", "hrms-media"),
+                "bucket_name": _supabase_bucket,
                 "region_name": os.getenv("SUPABASE_STORAGE_REGION", "ap-southeast-1"),
-                "endpoint_url": f"https://{os.getenv('SUPABASE_PROJECT_ID')}.supabase.co/storage/v1/s3",
-                "default_acl": "public-read",
+                "endpoint_url": f"https://{_supabase_project_id}.supabase.co/storage/v1/s3",
+                "default_acl": None,  # Supabase S3 does not support object ACLs
                 "querystring_auth": False,  # Generates clean, permanent public URLs without expiring tokens
+                "addressing_style": "path",  # Required for Supabase S3 compatibility
+                "custom_domain": f"{_supabase_project_id}.supabase.co/storage/v1/object/public/{_supabase_bucket}",
             },
         },
         "staticfiles": {
