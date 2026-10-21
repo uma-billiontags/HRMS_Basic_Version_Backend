@@ -76,6 +76,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
     normal_break_hours = serializers.SerializerMethodField()
     other_pause_hours = serializers.SerializerMethodField()
     untracked_hours = serializers.SerializerMethodField()
+    tag_id = serializers.SerializerMethodField()
 
     class Meta:
         model = Attendance
@@ -124,6 +125,17 @@ class AttendanceSerializer(serializers.ModelSerializer):
 
     def get_untracked_hours(self, obj):
         return self._get_calc_data(obj).get("untracked_hours")
+
+    def get_tag_id(self, obj):
+        if obj.tag_id:
+            return obj.tag_id
+        if obj.employee and obj.employee.employee_id:
+            return obj.employee.employee_id
+        if obj.employee:
+            return f"TAG{obj.employee.id:03d}"
+        if obj.admin:
+            return f"TAG{obj.admin.id:03d}"
+        return "" 
 
     def get_day_name(self, obj):
         if obj.date:

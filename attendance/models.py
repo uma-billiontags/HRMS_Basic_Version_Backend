@@ -90,6 +90,16 @@ class Attendance(models.Model):
             return self.employee.role or ""
         return "Admin"
 
+    def save(self, *args, **kwargs):
+        if not self.tag_id:
+            if self.employee and self.employee.employee_id:
+                self.tag_id = self.employee.employee_id
+            elif self.employee:
+                self.tag_id = f"TAG{self.employee.id:03d}"
+            elif self.admin:
+                self.tag_id = f"TAG{self.admin.id:03d}"
+        super().save(*args, **kwargs)
+
 
 class AttendanceComment(models.Model):
     attendance = models.ForeignKey(

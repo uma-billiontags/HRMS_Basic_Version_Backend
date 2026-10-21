@@ -307,6 +307,8 @@ def get_my_attendance(request):
 
         if rec:
             data = AttendanceSerializer(rec, context={"request": request}).data
+            if not data.get("tag_id"):
+                data["tag_id"] = tag_id
             # Accumulate stats
             if rec.status == Attendance.Status.EARLY:
                 summary_counts["early"] += 1
@@ -648,6 +650,8 @@ def admin_get_monthly(request):
 
             if rec:
                 row_data = AttendanceSerializer(rec).data
+                if not row_data.get("tag_id"):
+                    row_data["tag_id"] = tag_id
                 # Tally
                 if rec.status == Attendance.Status.EARLY:
                     emp_stats["early"] += 1
@@ -922,12 +926,54 @@ def decide_attendance_correction(request, pk):
 
         record.save()
     else:
-        # Rejected: DO NOT update time in DB! Keep original times!
+        # Rejected: DO NOT update time in DB! Keep original times, but record rejection reason in Remarks & Notes!
         correction.status = AttendanceCorrectionRequest.Status.REJECTED
         correction.admin_notes = admin_notes
         correction.decided_by = admin_user
         correction.decided_at = now
         correction.save()
+
+        record = correction.attendance
+        if not record:
+            filter_kwargs = {"employee": correction.employee} if correction.employee else {"admin": correction.admin}
+            record, _ = Attendance.objects.get_or_create(
+                date=correction.date,
+                defaults={
+                    "status": Attendance.Status.WEEK_OFF if correction.date.weekday() == 6 else Attendance.Status.ABSENT,
+                    "tag_id": (
+                        correction.employee.employee_id
+                        if (correction.employee and correction.employee.employee_id)
+                        else f"TAG{correction.employee.id if correction.employee else correction.admin.id:03d}"
+                    ),
+                },
+                **filter_kwargs,
+            )
+            correction.attendance = record
+            correction.save(update_fields=["attendance"])
+
+        req_type_str = "In-Time" if correction.request_type == AttendanceCorrectionRequest.RequestType.IN_TIME else "Out-Time"
+        rejection_reason = admin_notes if admin_notes else "Proof rejected by Admin"
+        rejection_note = f"Rejected ({req_type_str}): {rejection_reason}"
+
+        if record.remarks:
+            record.remarks += f" | {rejection_note}"
+        else:
+            record.remarks = rejection_note
+
+        if not record.tag_id:
+            if record.employee and record.employee.employee_id:
+                record.tag_id = record.employee.employee_id
+            elif record.employee:
+                record.tag_id = f"TAG{record.employee.id if record.employee else record.admin.id:03d}"
+
+        record.save()
+
+        AttendanceComment.objects.create(
+            attendance=record,
+            author_name=admin_user.name if admin_user else "Admin",
+            author_role="admin",
+            comment=f"Time correction request rejected: {rejection_reason}",
+        )
 
     return Response(AttendanceCorrectionSerializer(correction, context={"request": request}).data)
 
@@ -961,4 +1007,5 @@ def list_attendance_corrections(request):
     return Response(
         AttendanceCorrectionSerializer(qs.order_by("-created_at"), many=True, context={"request": request}).data
     )
+
 
