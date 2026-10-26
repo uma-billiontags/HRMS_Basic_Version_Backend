@@ -13,13 +13,18 @@
     .textarea-field { width: 100%; box-sizing: border-box; padding: 10px 12px; border-radius: 8px; border: 1px solid #cbd5e1; font-family: inherit; font-size: 14px; resize: vertical; outline: none; }
     .textarea-field:focus { border-color: #3b82f6; ring: 2px solid #bfdbfe; }
     .error-msg { background: #fef2f2; border: 1px solid #f87171; color: #991b1b; padding: 10px 14px; border-radius: 8px; margin-bottom: 16px; font-size: 14px; }
+    .info-row { color: #64748b; font-size: 14px; margin: 4px 0; }
   </style>
 </head>
 <body>
   <main class="card">
     <h1>Confirm {{ decision }}</h1>
     <p><strong>{{ item.subject }}</strong></p>
-    <p style="color: #64748b; font-size: 14px;">Request from <strong>{{ item.employee.name }}</strong> ({{ item.employee.email }})</p>
+    <p class="info-row">Request from <strong>{{ item.employee.name }}</strong> ({{ item.employee.email }})</p>
+    <p class="info-row">To: <strong>{{ item.recipient_email }}</strong></p>
+    {% if item.cc_email %}
+      <p class="info-row">Cc: <strong>{{ item.cc_email }}</strong></p>
+    {% endif %}
     
     {% if error %}
       <div class="error-msg">{{ error }}</div>

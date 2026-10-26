@@ -151,6 +151,9 @@ class AttendanceCorrectionRequest(models.Model):
     decided_by = models.ForeignKey(
         Admin, null=True, blank=True, on_delete=models.SET_NULL, related_name="decided_attendance_corrections"
     )
+    decided_by_employee = models.ForeignKey(
+        Employee, null=True, blank=True, on_delete=models.SET_NULL, related_name="decided_attendance_corrections_as_tl"
+    )
     decided_at = models.DateTimeField(null=True, blank=True)
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)

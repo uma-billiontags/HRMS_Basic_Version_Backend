@@ -35,24 +35,37 @@ class AdminSerializer(serializers.ModelSerializer):
 
 
 class EmployeeSerializer(serializers.ModelSerializer):
+    belong_to_tl_name = serializers.CharField(source="belong_to_tl.name", read_only=True, default=None)
+
     class Meta:
         model = Employee
-        fields = ["id", "name", "email", "department", "role"]
+        fields = ["id", "name", "email", "department", "role", "belong_to_tl", "belong_to_tl_name"]
         
 
 class EmployeeCredentialSerializer(serializers.ModelSerializer):
     """Used by the Team Access list/table — never exposes the password hash."""
+    belong_to_tl_name = serializers.CharField(source="belong_to_tl.name", read_only=True, default=None)
+
     class Meta:
         model = Employee
-        fields = ["id", "employee_id", "name", "email", "department", "role", "is_active", "created_at"]
+        fields = [
+            "id", "employee_id", "name", "email", "department",
+            "role", "belong_to_tl", "belong_to_tl_name", "is_active", "created_at"
+        ]
 
 
 class EmployeeWriteSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, required=False, allow_blank=True)
+    belong_to_tl = serializers.PrimaryKeyRelatedField(
+        queryset=Employee.objects.all(), required=False, allow_null=True
+    )
 
     class Meta:
         model = Employee
-        fields = ["id", "employee_id", "name", "email", "password", "department", "role", "is_active"]
+        fields = [
+            "id", "employee_id", "name", "email", "password",
+            "department", "role", "belong_to_tl", "is_active"
+        ]
         extra_kwargs = {
             "name": {"required": True},
             "email": {"required": True},
@@ -90,6 +103,22 @@ class EmployeeWriteSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         if self.instance is None and not attrs.get("password"):
             raise serializers.ValidationError({"password": "Password is required when creating a new employee."})
+
+        role = attrs.get("role")
+        if role is None and self.instance:
+            role = self.instance.role
+
+        is_tl_role = bool(role and role.strip().upper() in ["TL", "TEAM LEAD"])
+        if is_tl_role:
+            attrs["belong_to_tl"] = None
+        else:
+            belong_to_tl = attrs.get("belong_to_tl")
+            if belong_to_tl:
+                if self.instance and belong_to_tl.pk == self.instance.pk:
+                    raise serializers.ValidationError({"belong_to_tl": "An employee cannot report to themselves."})
+                if not (belong_to_tl.role and belong_to_tl.role.strip().upper() in ["TL", "TEAM LEAD"]):
+                    raise serializers.ValidationError({"belong_to_tl": "Selected employee is not a Team Lead."})
+
         return attrs
     
     def create(self, validated_data):

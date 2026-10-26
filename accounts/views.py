@@ -54,7 +54,7 @@ def me_view(request):
     else:
         data = EmployeeSerializer(principal.instance).data  # keeps job-title `role`, e.g. "TL"
         data["auth_role"] = "employee"
-        data["is_tl"] = principal.instance.role == "TL"
+        data["is_tl"] = bool(principal.instance.role and principal.instance.role.strip().upper() in ["TL", "TEAM LEAD"])
     return Response(data)
 
 
@@ -68,7 +68,7 @@ def get_all_employee_credentials(request):
     """GET /api/auth/employees/ — Team Access list. Admin-only."""
     if not _is_admin(request):
         return Response({"detail": "Admin only."}, status=status.HTTP_403_FORBIDDEN)
-    employees = Employee.objects.all().order_by("name")
+    employees = Employee.objects.select_related("belong_to_tl").all().order_by("name")
     return Response(EmployeeCredentialSerializer(employees, many=True).data)
 
 

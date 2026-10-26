@@ -1,3 +1,4 @@
+import re
 from datetime import date
 from html import escape
 
@@ -17,11 +18,62 @@ from rest_framework.response import Response
 from .models import EmployeeRequest
 
 
+def _parse_and_validate_emails(raw_val, field_name="recipient email", required=False):
+    """
+    Parses email inputs from either a list of strings, or a string delimited by
+    commas, semicolons, or whitespace. Validates format and deduplicates.
+    """
+    if raw_val is None:
+        tokens = []
+    elif isinstance(raw_val, str):
+        tokens = [p.strip() for p in re.split(r"[,;\s]+", raw_val) if p.strip()]
+    elif isinstance(raw_val, (list, tuple)):
+        tokens = []
+        for item in raw_val:
+            if isinstance(item, str):
+                for sub in re.split(r"[,;\s]+", item):
+                    if sub.strip():
+                        tokens.append(sub.strip())
+    else:
+        tokens = []
+
+    if required and not tokens:
+        raise ValidationError(f"Please enter at least one valid {field_name}.")
+
+    cleaned_list = []
+    for email in tokens:
+        try:
+            validate_email(email)
+            if email not in cleaned_list:
+                cleaned_list.append(email)
+        except ValidationError:
+            raise ValidationError(f"Invalid {field_name}: '{email}'. Please check the format.")
+
+    if required and not cleaned_list:
+        raise ValidationError(f"Please enter at least one valid {field_name}.")
+
+    return cleaned_list
+
+
+def _is_tl(request):
+    return (
+        getattr(request.user, "role", None) == "employee"
+        and getattr(request.user.instance, "role", "") in ("TL", "Team Lead")
+    )
+
+
 def _serialize(item):
+    decided_by_str = ""
+    if getattr(item, "decided_by_admin", None):
+        decided_by_str = f"Admin ({item.decided_by_admin.name})"
+    elif getattr(item, "decided_by_employee", None):
+        decided_by_str = f"TL ({item.decided_by_employee.name})"
+
     return {
         "id": item.pk,
         "request_type": item.request_type,
         "recipient_email": item.recipient_email,
+        "cc_email": getattr(item, "cc_email", "") or "",
         "sender_email": item.employee.email,
         "employee_name": item.employee.name,
         "subject": item.subject,
@@ -32,6 +84,7 @@ def _serialize(item):
         "end_time": item.end_time,
         "status": item.status,
         "decision_note": item.decision_note,
+        "decided_by_name": decided_by_str,
         "created_at": item.created_at,
         "decided_at": item.decided_at,
     }
@@ -54,15 +107,20 @@ def create_request(request):
 
     data = request.data
     request_type = data.get("request_type")
-    recipient = str(data.get("recipient_email", "")).strip()
+    raw_recipient = data.get("recipient_email") or data.get("recipient_emails") or data.get("to")
+    raw_cc = data.get("cc_email") or data.get("cc_emails") or data.get("cc")
     subject = str(data.get("subject", "")).strip()
     body = str(data.get("body", "")).strip()
+
     if request_type not in EmployeeRequest.RequestType.values:
         return Response({"detail": "Choose a valid request template."}, status=status.HTTP_400_BAD_REQUEST)
+
     try:
-        validate_email(recipient)
-    except ValidationError:
-        return Response({"detail": "Enter a valid recipient email."}, status=status.HTTP_400_BAD_REQUEST)
+        to_list = _parse_and_validate_emails(raw_recipient, field_name="recipient email", required=True)
+        cc_list = _parse_and_validate_emails(raw_cc, field_name="CC email", required=False)
+    except ValidationError as err:
+        return Response({"detail": err.message if hasattr(err, "message") else str(err)}, status=status.HTTP_400_BAD_REQUEST)
+
     if not subject or len(subject) > 200 or not body:
         return Response({"detail": "Subject (up to 200 characters) and message are required."}, status=status.HTTP_400_BAD_REQUEST)
 
@@ -91,12 +149,16 @@ def create_request(request):
             status=status.HTTP_503_SERVICE_UNAVAILABLE,
         )
 
+    recipient_str = ", ".join(to_list)
+    cc_str = ", ".join(cc_list)
+
     try:
         with transaction.atomic():
             item = EmployeeRequest.objects.create(
                 employee=request.user.instance,
                 request_type=request_type,
-                recipient_email=recipient,
+                recipient_email=recipient_str,
+                cc_email=cc_str,
                 subject=subject,
                 body=body,
                 start_date=start_date,
@@ -110,40 +172,59 @@ def create_request(request):
             safe_subject = escape(subject)
             safe_name = escape(request.user.name)
             safe_body = escape(body).replace("\n", "<br>")
+            safe_to = escape(recipient_str)
+            safe_cc = escape(cc_str)
+
             date_text = str(start_date) if start_date else ""
             if end_date and end_date != start_date:
                 date_text += f" to {end_date}"
             time_text = ""
             if data.get("start_time") and data.get("end_time"):
                 time_text = f"{data.get('start_time')} to {data.get('end_time')}"
+
             request_details_html = ""
             if date_text:
                 request_details_html += f"<p><strong>Dates:</strong> {escape(date_text)}</p>"
             if time_text:
                 request_details_html += f"<p><strong>Time:</strong> {escape(time_text)}</p>"
+
+            cc_html_line = f"<p><strong>Cc:</strong> {safe_cc}</p>" if safe_cc else ""
+
             html = f"""
-                <div style='font-family:Arial,sans-serif;max-width:640px;margin:auto;color:#172554'>
-                  <h2>Request from {safe_name}</h2><h3>{safe_subject}</h3>
+                <div style='font-family:Arial,sans-serif;max-width:640px;margin:auto;color:#172554;padding:24px;border:1px solid #E2E8F0;border-radius:12px;'>
+                  <h2 style='margin-top:0;'>Request from {safe_name}</h2>
+                  <h3 style='color:#1E293B;'>{safe_subject}</h3>
+                  <p><strong>To:</strong> {safe_to}</p>
+                  {cc_html_line}
                   {request_details_html}
-                  <p>{safe_body}</p>
-                  <p style='color:#64748b'>Reply to: {escape(request.user.email)}</p>
-                  <a href='{approve_url}' style='display:inline-block;padding:12px 18px;margin-right:8px;background:#059669;color:white;text-decoration:none;border-radius:6px'>Approve</a>
-                  <a href='{reject_url}' style='display:inline-block;padding:12px 18px;background:#dc2626;color:white;text-decoration:none;border-radius:6px'>Reject</a>
-                  <p style='font-size:12px;color:#64748b'>You will be asked to confirm your decision before it is recorded.</p>
+                  <div style='margin:16px 0;padding:12px 16px;background:#F8FAFC;border-radius:8px;border:1px solid #E2E8F0;line-height:1.6;'>
+                    {safe_body}
+                  </div>
+                  <p style='color:#64748b;font-size:13px;'>Reply to: {escape(request.user.email)}</p>
+                  <div style='margin:20px 0;'>
+                    <a href='{approve_url}' style='display:inline-block;padding:12px 20px;margin-right:10px;background:#059669;color:white;text-decoration:none;border-radius:6px;font-weight:600;'>Approve</a>
+                    <a href='{reject_url}' style='display:inline-block;padding:12px 20px;background:#dc2626;color:white;text-decoration:none;border-radius:6px;font-weight:600;'>Reject</a>
+                  </div>
+                  <p style='font-size:12px;color:#64748b;margin-bottom:0;'>You will be asked to confirm your decision before it is recorded.</p>
                 </div>
             """
+            cc_plain = f"Cc: {cc_str}\n" if cc_str else ""
             text = (
                 f"Request from {request.user.name}\n\n{subject}\n"
+                f"To: {recipient_str}\n{cc_plain}"
                 f"Dates: {date_text}\nTime: {time_text}\n\n{body}\n\n"
                 f"Reply to: {request.user.email}\n\nApprove: {approve_url}\nReject: {reject_url}"
             )
             email = EmailMultiAlternatives(
-                subject=f"HRMS Request: {subject}", body=text,
-                from_email=settings.DEFAULT_FROM_EMAIL, to=[recipient],
+                subject=f"HRMS Request: {subject}",
+                body=text,
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                to=to_list,
+                cc=cc_list if cc_list else None,
                 reply_to=[request.user.email],
             )
             email.attach_alternative(html, "text/html")
-            if email.send(fail_silently=False) != 1:
+            if email.send(fail_silently=False) < 1:
                 raise RuntimeError("The email provider did not accept the message.")
     except Exception as exc:
         return Response({"detail": f"Request email could not be sent: {exc}"}, status=status.HTTP_502_BAD_GATEWAY)
@@ -154,9 +235,16 @@ def create_request(request):
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def admin_requests(request):
-    if request.user.role != "admin":
-        return Response({"detail": "Admin access only."}, status=status.HTTP_403_FORBIDDEN)
-    rows = EmployeeRequest.objects.select_related("employee")
+    is_admin = getattr(request.user, "role", None) == "admin"
+    is_tl = _is_tl(request)
+    if not (is_admin or is_tl):
+        return Response({"detail": "Admin or Team Lead access only."}, status=status.HTTP_403_FORBIDDEN)
+
+    rows = EmployeeRequest.objects.select_related("employee", "decided_by_admin", "decided_by_employee")
+    if is_tl and not is_admin:
+        # TL receives requests ONLY from employees who belong to THIS TL
+        rows = rows.filter(employee__belong_to_tl=request.user.instance)
+
     status_filter = request.query_params.get("status")
     if status_filter in EmployeeRequest.Status.values:
         rows = rows.filter(status=status_filter)
@@ -189,19 +277,19 @@ def _send_decision_email(item, decision, decision_note=""):
         status_title = "Request Rejected"
         status_color = "#DC2626"
         note_block = f"""
-            <div style='background:#FEF2F2;border:1px solid #FCA5A5;border-radius:8px;padding:14px;margin:16px 0;'>
-                <strong style='color:#DC2626;display:block;margin-bottom:6px;'>Reason for Rejection:</strong>
-                <div style='color:#7F1D1D;'>{safe_note}</div>
+            <div style='margin-top:16px;padding:12px 16px;background:#FEF2F2;border:1px solid #FCA5A5;border-radius:8px;'>
+                <strong style='color:#DC2626;display:block;margin-bottom:4px;'>Reason for Rejection:</strong>
+                <span style='color:#991B1B;'>{safe_note}</span>
             </div>
-        """
-        plain_note = f"\n\nReason for Rejection:\n{decision_note}"
+        """ if safe_note else ""
+        plain_note = f"\n\nReason for Rejection: {decision_note}" if decision_note else ""
     else:
         status_title = "Request Approved"
         status_color = "#059669"
         note_block = f"""
-            <div style='background:#F0FDF4;border:1px solid #86EFAC;border-radius:8px;padding:14px;margin:16px 0;'>
-                <strong style='color:#059669;display:block;margin-bottom:6px;'>Decision Note:</strong>
-                <div style='color:#14532D;'>{safe_note if safe_note else "Your request has been approved."}</div>
+            <div style='margin-top:16px;padding:12px 16px;background:#F0FDF4;border:1px solid #86EFAC;border-radius:8px;'>
+                <strong style='color:#16A34A;display:block;margin-bottom:4px;'>Approval Note:</strong>
+                <span style='color:#166534;'>{safe_note}</span>
             </div>
         """ if safe_note else "<div style='color:#059669;font-weight:bold;margin:14px 0;'>Your request has been approved.</div>"
         plain_note = f"\n\nNote: {decision_note}" if decision_note else ""
@@ -227,12 +315,15 @@ def _send_decision_email(item, decision, decision_note=""):
         "HRMS Notification"
     )
 
+    cc_list = item.get_cc_list()
+
     try:
         email = EmailMultiAlternatives(
             subject=f"HRMS Request {decision.capitalize()}: {item.subject}",
             body=plain_text,
             from_email=settings.DEFAULT_FROM_EMAIL,
             to=[recipient],
+            cc=cc_list if cc_list else None,
         )
         email.attach_alternative(html, "text/html")
         email.send(fail_silently=True)
@@ -243,8 +334,11 @@ def _send_decision_email(item, decision, decision_note=""):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def admin_decide_request(request, pk):
-    if request.user.role != "admin":
-        return Response({"detail": "Admin access only."}, status=status.HTTP_403_FORBIDDEN)
+    is_admin = getattr(request.user, "role", None) == "admin"
+    is_tl = _is_tl(request)
+    if not (is_admin or is_tl):
+        return Response({"detail": "Admin or Team Lead access only."}, status=status.HTTP_403_FORBIDDEN)
+
     decision = request.data.get("decision")
     if decision not in ("approved", "rejected"):
         return Response({"detail": "Decision must be approved or rejected."}, status=status.HTTP_400_BAD_REQUEST)
@@ -257,10 +351,24 @@ def admin_decide_request(request, pk):
         item = get_object_or_404(EmployeeRequest.objects.select_for_update().select_related("employee"), pk=pk)
         if item.status != EmployeeRequest.Status.PENDING:
             return Response({"detail": "This request has already been decided."}, status=status.HTTP_409_CONFLICT)
+        
+        if is_tl and not is_admin:
+            if item.employee_id == request.user.instance.id:
+                return Response({"detail": "You cannot decide on your own request."}, status=status.HTTP_403_FORBIDDEN)
+            if item.employee and item.employee.role in ("TL", "Team Lead"):
+                return Response({"detail": "Team Lead requests must be decided by an Administrator."}, status=status.HTTP_403_FORBIDDEN)
+            if item.employee and item.employee.belong_to_tl_id != request.user.instance.id:
+                return Response({"detail": "You can only decide requests for your team members."}, status=status.HTTP_403_FORBIDDEN)
+            item.decided_by_employee = request.user.instance
+            item.decided_by_admin = None
+        elif is_admin:
+            item.decided_by_admin = request.user.instance
+            item.decided_by_employee = None
+
         item.status = decision
         item.decision_note = decision_note
         item.decided_at = timezone.now()
-        item.save(update_fields=["status", "decision_note", "decided_at"])
+        item.save()
 
     _send_decision_email(item, decision, decision_note)
     return Response(_serialize(item))

@@ -7,6 +7,7 @@ from .utils import _is_admin, _current_employee, _can_review_task, _is_tl, task_
 from rest_framework import status
 from django.shortcuts import get_object_or_404
 from django.db import transaction
+from django.db.models import Q
 from ..activity import ActivityLog, log_activity
 from django.utils import timezone
 from ..models import Task
@@ -36,19 +37,28 @@ def get_review_tasks(request):
 def get_tl_review_tasks(request):
     """
     GET /api/tasks/tl_review_tasks/
-    TL-only. Tasks THIS TL created and assigned to someone else — mirrors
-    get_tl_tasks vs get_all_tasks. Self-assigned tasks are excluded; those
-    go to the admin review queue instead, since a TL can't review their
-    own submitted work.
+    TL-only. Tasks eligible for review by this TL:
+      1) Tasks THIS TL created and assigned to someone else (self-assigned tasks go to admin).
+      2) Tasks created by Admin for employees who belong to THIS TL.
     """
     if not _is_tl(request):
         return Response({"detail": "Team leads only."}, status=status.HTTP_403_FORBIDDEN)
 
     employee = _current_employee(request)
+    pending_statuses = [Task.Status.SUBMITTED, Task.Status.RESUBMITTED, Task.Status.UNDER_REVIEW]
     tasks = task_list_queryset().filter(
-        assigned_by_employee=employee,
-        task_status__in=[Task.Status.SUBMITTED, Task.Status.RESUBMITTED, Task.Status.UNDER_REVIEW],
-    ).exclude(assigned_to=employee)
+        (
+            Q(assigned_by_employee=employee, task_status__in=pending_statuses)
+            & ~Q(assigned_to=employee)
+        )
+        | (
+            Q(
+                assigned_to__belong_to_tl=employee,
+                assigned_by_admin__isnull=False,
+                task_status__in=pending_statuses,
+            )
+        )
+    ).distinct()
     return Response(TaskListSerializer(tasks, many=True).data)
 
 @api_view(["POST"])

@@ -40,6 +40,11 @@ def _current_admin(request):
     return None
 
 
+def _is_tl(request):
+    emp = _current_employee(request)
+    return emp is not None and getattr(emp, "role", "") in ("TL", "Team Lead")
+
+
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])
 def get_today_status(request):
@@ -787,6 +792,9 @@ def submit_correction_request(request):
     except ValueError:
         return Response({"detail": "Invalid date format. Use YYYY-MM-DD."}, status=status.HTTP_400_BAD_REQUEST)
 
+    if req_date > timezone.localdate():
+        return Response({"detail": "Cannot request attendance time correction for future dates."}, status=status.HTTP_400_BAD_REQUEST)
+
     try:
         parts = [int(p) for p in requested_time_str.split(":")[:2]]
         req_time = datetime.time(parts[0], parts[1], 0)
@@ -842,12 +850,26 @@ def decide_attendance_correction(request, pk):
     POST /api/attendance/corrections/<pk>/decision/
     Body: { "decision": "approve" | "reject", "admin_notes": "..." }
     """
-    if not _is_admin(request):
-        return Response({"detail": "Admin only."}, status=status.HTTP_403_FORBIDDEN)
+    is_admin = _is_admin(request)
+    is_tl = _is_tl(request)
+    if not (is_admin or is_tl):
+        return Response({"detail": "Admin or Team Lead access only."}, status=status.HTTP_403_FORBIDDEN)
 
     correction = get_object_or_404(AttendanceCorrectionRequest, pk=pk)
     if correction.status != AttendanceCorrectionRequest.Status.PENDING:
         return Response({"detail": "This request has already been decided."}, status=status.HTTP_400_BAD_REQUEST)
+
+    emp_user = _current_employee(request)
+    admin_user = _current_admin(request)
+
+    # Security check: TL cannot decide on their own request or another TL's request
+    if is_tl and not is_admin:
+        if correction.employee_id == emp_user.id:
+            return Response({"detail": "You cannot decide on your own correction request. It must be approved by an Administrator."}, status=status.HTTP_403_FORBIDDEN)
+        if correction.employee and correction.employee.role in ("TL", "Team Lead"):
+            return Response({"detail": "Team Lead correction requests must be decided by an Administrator."}, status=status.HTTP_403_FORBIDDEN)
+        if correction.employee and correction.employee.belong_to_tl_id != emp_user.id:
+            return Response({"detail": "You can only decide correction requests for your team members."}, status=status.HTTP_403_FORBIDDEN)
 
     decision = request.data.get("decision")
     admin_notes = request.data.get("admin_notes", "").strip()
@@ -855,13 +877,17 @@ def decide_attendance_correction(request, pk):
     if decision not in ("approve", "reject"):
         return Response({"detail": "Decision must be 'approve' or 'reject'."}, status=status.HTTP_400_BAD_REQUEST)
 
-    admin_user = _current_admin(request)
     now = timezone.now()
 
     if decision == "approve":
         correction.status = AttendanceCorrectionRequest.Status.APPROVED
         correction.admin_notes = admin_notes
-        correction.decided_by = admin_user
+        if admin_user:
+            correction.decided_by = admin_user
+            correction.decided_by_employee = None
+        else:
+            correction.decided_by = None
+            correction.decided_by_employee = emp_user
         correction.decided_at = now
         correction.save()
 
@@ -929,7 +955,12 @@ def decide_attendance_correction(request, pk):
         # Rejected: DO NOT update time in DB! Keep original times, but record rejection reason in Remarks & Notes!
         correction.status = AttendanceCorrectionRequest.Status.REJECTED
         correction.admin_notes = admin_notes
-        correction.decided_by = admin_user
+        if admin_user:
+            correction.decided_by = admin_user
+            correction.decided_by_employee = None
+        else:
+            correction.decided_by = None
+            correction.decided_by_employee = emp_user
         correction.decided_at = now
         correction.save()
 
@@ -982,11 +1013,21 @@ def decide_attendance_correction(request, pk):
 @permission_classes([IsAuthenticated])
 def list_attendance_corrections(request):
     """
-    GET /api/attendance/corrections/?status=pending|approved|rejected&date=...
-    Admin gets all requests; employee gets their own.
+    GET /api/attendance/corrections/?status=pending|approved|rejected&date=...&view=team|mine
+    Admin gets all requests.
+    TL with ?view=team gets all employee requests EXCLUDING TL's own requests and any other TL requests.
+    Employee gets their own requests.
     """
-    qs = AttendanceCorrectionRequest.objects.all().select_related("employee", "admin", "decided_by", "attendance")
-    if not _is_admin(request):
+    qs = AttendanceCorrectionRequest.objects.all().select_related("employee", "admin", "decided_by", "decided_by_employee", "attendance")
+    view_type = request.query_params.get("view")
+
+    if _is_admin(request):
+        pass
+    elif _is_tl(request) and view_type == "team":
+        emp = _current_employee(request)
+        # Show requests ONLY from employees who belong to THIS TL
+        qs = qs.filter(employee__belong_to_tl=emp)
+    else:
         emp = _current_employee(request)
         adm = _current_admin(request)
         if emp:

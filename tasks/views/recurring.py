@@ -184,7 +184,13 @@ def stop_recurring_task(request, pk):
 @permission_classes([IsAuthenticated])
 def get_all_tasks(request):
     generate_recurring_tasks()
-    tasks = task_list_queryset()
+    if _is_admin(request):
+        # Admin does not see tasks created by TLs (unless assigned to admin)
+        tasks = task_list_queryset().filter(
+            Q(assigned_by_employee__isnull=True) | Q(assigned_to_admin__isnull=False)
+        )
+    else:
+        tasks = task_list_queryset()
     return Response(TaskListSerializer(tasks, many=True).data)
 
 @api_view(["GET"])
@@ -211,7 +217,11 @@ def get_tl_tasks(request):
     if not _is_tl(request):
         return Response({"detail": "Team leads only."}, status=status.HTTP_403_FORBIDDEN)
     employee = _current_employee(request)
-    tasks = task_list_queryset().filter(assigned_by_employee=employee)
+    # Show tasks created by this TL OR assigned to team members belonging to this TL
+    tasks = task_list_queryset().filter(
+        Q(assigned_by_employee=employee) |
+        Q(assigned_to__belong_to_tl=employee)
+    ).distinct()
     return Response(TaskListSerializer(tasks, many=True).data)
 
 @api_view(["GET"])

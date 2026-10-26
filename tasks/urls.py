@@ -14,6 +14,10 @@ urlpatterns = [
     path("get_all_employees/", views.get_all_employees, name="task-employees"),
     path("get_priority_choices/", views.get_priority_choices, name="task-priorities"),
 
+    # ── Task Master / Catalog ─────────────────────────────────────────────
+    path("task_master/", views.task_master_view, name="task-master"),
+    path("task_master/<int:pk>/", views.task_master_detail_view, name="task-master-detail"),
+
     path("my_tasks/", views.get_my_tasks, name="employee-my-tasks"),
     path("tl_tasks/", views.get_tl_tasks, name="tl-tasks"),
 
@@ -57,14 +61,6 @@ urlpatterns = [
     path("reports/employee/", views.get_my_reports, name="reports-employee"),
     path("reports/daily_timeline/", views.get_daily_timeline, name="reports-daily-timeline"),
     path("reports/assigned_hours_tracking/", views.get_assigned_hours_tracking, name="reports-assigned-hours-tracking"),
-
-    # ── Task Master (reusable task catalog) ──────────────────────────────
-    path("task_master/", views.get_task_master_list, name="task-master-list"),         # dropdown source, active-only
-    path("task_master/get_all/", views.get_all_task_master, name="task-master-all"),   # management screen
-    path("task_master/create/", views.create_task_master, name="task-master-create"),
-    path("task_master/bulk_create/", views.bulk_create_task_master, name="task-master-bulk-create"),
-    path("task_master/<int:pk>/edit/", views.edit_task_master, name="task-master-edit"),
-    path("task_master/<int:pk>/delete/", views.delete_task_master, name="task-master-delete"),
 
     # ── Recurring (daily) tasks ──────────────────────────────────────────
     path("recurring/", views.get_recurring_tasks, name="recurring-list"),

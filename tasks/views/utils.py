@@ -38,7 +38,7 @@ def _is_task_assignee(request, task):
 
 def _is_tl(request):
     employee = _current_employee(request)
-    return employee is not None and employee.role == "TL"
+    return employee is not None and bool(employee.role and employee.role.strip().upper() in ["TL", "TEAM LEAD"])
 
 def _can_manage_tasks(request):
     """Who's allowed to create tasks at all: Admin or a TL."""
@@ -50,24 +50,35 @@ def _owns_task_for_management(request, task):
     if _is_admin(request):
         return True
     employee = _current_employee(request)
-    return employee is not None and employee.role == "TL" and task.assigned_by_employee_id == employee.id
+    return (
+        employee is not None
+        and bool(employee.role and employee.role.strip().upper() in ["TL", "TEAM LEAD"])
+        and task.assigned_by_employee_id == employee.id
+    )
 
 def _can_review_task(request, task):
     """
-    Who's allowed to review THIS task: Admin always. A TL only if they
-    created it AND it isn't assigned to themselves — self-assigned TL
-    tasks must go to admin for review, so a TL can't approve their own work.
+    Who's allowed to review THIS task:
+    - Admin: always.
+    - TL: allowed if:
+      1) They created it AND it isn't assigned to themselves (self-assigned TL tasks go to admin).
+      2) OR Admin created it and the assigned employee belongs to this TL.
     """
     if _is_admin(request):
         return True
     employee = _current_employee(request)
-    if employee is None or employee.role != "TL":
+    if employee is None or not (employee.role and employee.role.strip().upper() in ["TL", "TEAM LEAD"]):
         return False
-    if task.assigned_by_employee_id != employee.id:
-        return False
-    if task.assigned_to_id == employee.id:
-        return False  # self-assigned — admin reviews this one instead
-    return True
+
+    # Case 1: TL created it (and didn't self-assign)
+    if task.assigned_by_employee_id == employee.id:
+        return task.assigned_to_id != employee.id
+
+    # Case 2: Admin created it and the assigned employee reports to this TL
+    if task.assigned_by_admin_id and task.assigned_to:
+        return getattr(task.assigned_to, "belong_to_tl_id", None) == employee.id
+
+    return False
 
 
 def timezone_now():
@@ -88,7 +99,7 @@ def task_list_queryset():
 
     return (
         Task.objects
-        .select_related("assigned_to", "assigned_to_admin", "assigned_by_admin", "assigned_by_employee")
+        .select_related("assigned_to", "assigned_to__belong_to_tl", "assigned_to_admin", "assigned_by_admin", "assigned_by_employee")
         .prefetch_related("attachments")
         .annotate(
             _has_active_session=Exists(

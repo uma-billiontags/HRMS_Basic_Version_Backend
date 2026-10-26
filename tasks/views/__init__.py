@@ -2,7 +2,8 @@
 
 from .task_views import (
     create_task, assign_task, create_and_assign_task, get_all_departments,
-    get_all_employees, get_priority_choices, get_all_admins, get_admin_my_tasks
+    get_all_employees, get_priority_choices, get_all_admins, get_admin_my_tasks,
+    task_master_view, task_master_detail_view
 )
 from .timer_views import (
     get_active_session, start_task, pause_task, resume_task,
@@ -25,10 +26,6 @@ from .activity_views import (
 from .report_views import (
     get_admin_reports, get_my_reports, get_employee_rating_trends, get_daily_timeline,
     get_assigned_hours_tracking,
-)
-from .task_master_views import (
-    get_task_master_list, get_all_task_master, create_task_master,
-    edit_task_master, delete_task_master, bulk_create_task_master,
 )
 
 from .recurring import (

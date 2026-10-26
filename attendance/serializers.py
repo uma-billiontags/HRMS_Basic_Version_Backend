@@ -13,7 +13,7 @@ class AttendanceCommentSerializer(serializers.ModelSerializer):
 class AttendanceCorrectionSerializer(serializers.ModelSerializer):
     employee_name = serializers.SerializerMethodField()
     department = serializers.SerializerMethodField()
-    decided_by_name = serializers.CharField(source="decided_by.name", read_only=True)
+    decided_by_name = serializers.SerializerMethodField()
     requested_time_formatted = serializers.SerializerMethodField()
     system_time_formatted = serializers.SerializerMethodField()
     proof_screenshot_url = serializers.SerializerMethodField()
@@ -39,6 +39,13 @@ class AttendanceCorrectionSerializer(serializers.ModelSerializer):
         if obj.employee:
             return obj.employee.department or ""
         return "Admin"
+
+    def get_decided_by_name(self, obj):
+        if obj.decided_by:
+            return f"Admin ({obj.decided_by.name})"
+        if getattr(obj, "decided_by_employee", None):
+            return f"TL ({obj.decided_by_employee.name})"
+        return None
 
     def get_requested_time_formatted(self, obj):
         if obj.requested_time:
@@ -151,5 +158,3 @@ class AttendanceSerializer(serializers.ModelSerializer):
         if obj.out_time:
             return obj.out_time.strftime("%H:%M:%S")
         return None
-
-

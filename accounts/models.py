@@ -28,6 +28,14 @@ class Employee(models.Model):
     employee_id = models.CharField(max_length=50, unique=True, blank=True, null=True)  # NEW — manually entered by admin
     department = models.CharField(max_length=100, blank=True)
     role = models.CharField(max_length=100, blank=True)   # e.g. "Team Lead", "Developer"
+    belong_to_tl = models.ForeignKey(
+        "self",
+        null=True,
+        blank=True,
+        on_delete=models.SET_NULL,
+        related_name="team_members",
+        help_text="The Team Lead this employee reports to.",
+    )
     is_active = models.BooleanField(default=True)   # NEW — lets admin disable a login without deleting history
     created_at = models.DateTimeField(auto_now_add=True)
 

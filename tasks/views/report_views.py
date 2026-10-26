@@ -10,7 +10,7 @@ from ..models import Task, TimerSession, TaskPauseLog
 from accounts.models import Employee, Admin
 from ..serializers import ( TaskListSerializer )
 from django.db import models as db_models  # aliased so it doesn't clash with the `models` you already reference via Task etc.
-from tasks.views.utils import _is_admin, _current_employee, _current_admin, task_list_queryset
+from tasks.views.utils import _is_admin, _current_employee, _current_admin, _is_tl, task_list_queryset
 
 def _calculate_month_work_capacity(year: int, month: int):
     """
@@ -401,29 +401,46 @@ def get_daily_timeline(request):
         ]
     }
 
-    # Case 1: Employee logged in (always sees their own data)
+    # Case 1: Employee logged in (always sees their own data, unless TL viewing their team member)
     if not is_admin:
+        target_emp = current_emp
+        team_members_list = []
+        if _is_tl(request):
+            team_members = Employee.objects.filter(belong_to_tl=current_emp, is_active=True).order_by("name")
+            team_members_list = [
+                {"id": current_emp.id, "name": f"{current_emp.name} (My Details)", "department": current_emp.department}
+            ] + [{"id": e.id, "name": e.name, "department": e.department} for e in team_members]
+
+            if employee_param and employee_param.isdigit():
+                found = team_members.filter(pk=int(employee_param)).first()
+                if found:
+                    target_emp = found
+                elif int(employee_param) == current_emp.id:
+                    target_emp = current_emp
+
         if mode == "week":
             days = []
             for i in range(6, -1, -1):
                 d = target_date - datetime.timedelta(days=i)
                 u_start, u_end = _get_utc_day_bounds(d, tz_offset_str)
-                days.append(_build_day_timeline_for_actor(current_emp, False, d, u_start, u_end))
+                days.append(_build_day_timeline_for_actor(target_emp, False, d, u_start, u_end))
             return Response({
                 "view_type": "week",
-                "employee": {"id": current_emp.id, "name": current_emp.name, "department": current_emp.department},
+                "employee": {"id": target_emp.id, "name": target_emp.name, "department": target_emp.department},
                 "office_schedule": office_schedule,
                 "days": days,
                 "current_day": days[-1],
+                "team_members": team_members_list,
             })
         else:
             u_start, u_end = _get_utc_day_bounds(target_date, tz_offset_str)
-            day_data = _build_day_timeline_for_actor(current_emp, False, target_date, u_start, u_end)
+            day_data = _build_day_timeline_for_actor(target_emp, False, target_date, u_start, u_end)
             return Response({
                 "view_type": "day",
-                "employee": {"id": current_emp.id, "name": current_emp.name, "department": current_emp.department},
+                "employee": {"id": target_emp.id, "name": target_emp.name, "department": target_emp.department},
                 "office_schedule": office_schedule,
                 "data": day_data,
+                "team_members": team_members_list,
             })
 
     # Case 2: Admin logged in
@@ -522,14 +539,39 @@ def get_assigned_hours_tracking(request):
     actor_name = "All Employees"
     actor_role = "all"
 
+    employees_list = []
+    is_tl_user = False
     if not is_admin:
-        # Regular employee / TL viewing their own
-        base_tasks = task_list_queryset().filter(assigned_to=current_emp)
-        actor_id = current_emp.id
-        actor_name = current_emp.name
-        actor_role = "employee"
+        if _is_tl(request):
+            is_tl_user = True
+            team_members = Employee.objects.filter(belong_to_tl=current_emp, is_active=True).order_by("name")
+            target_emp = current_emp
+            if employee_param and employee_param.isdigit():
+                found = team_members.filter(pk=int(employee_param)).first()
+                if found:
+                    target_emp = found
+                elif int(employee_param) == current_emp.id:
+                    target_emp = current_emp
+
+            base_tasks = task_list_queryset().filter(assigned_to=target_emp)
+            actor_id = target_emp.id
+            actor_name = target_emp.name
+            actor_role = "employee"
+            employees_list = [
+                {"id": current_emp.id, "name": f"{current_emp.name} (My Details)", "department": current_emp.department}
+            ] + [{"id": e.id, "name": e.name, "department": e.department} for e in team_members]
+        else:
+            # Regular employee viewing their own
+            base_tasks = task_list_queryset().filter(assigned_to=current_emp)
+            actor_id = current_emp.id
+            actor_name = current_emp.name
+            actor_role = "employee"
     else:
         # Admin
+        employees_list = [
+            {"id": e.id, "name": e.name, "department": e.department}
+            for e in Employee.objects.filter(is_active=True).order_by("name")
+        ]
         if employee_param and employee_param.isdigit():
             emp = get_object_or_404(Employee, pk=int(employee_param))
             base_tasks = task_list_queryset().filter(assigned_to=emp)
@@ -631,10 +673,12 @@ def get_assigned_hours_tracking(request):
     avg_week_assigned = round(total_week_assigned / (active_employees_count if is_aggregate else 1), 2)
     week_utilization = round((total_week_assigned / team_week_hours) * 100, 1) if team_week_hours else 0
 
-    employees_list = (
-        list(Employee.objects.filter(is_active=True).values("id", "name", "department").order_by("name"))
-        if is_admin else []
-    )
+    if is_admin:
+        employees_list = list(
+            Employee.objects.filter(is_active=True).values("id", "name", "department").order_by("name")
+        )
+    elif not is_tl_user:
+        employees_list = []
 
     return Response({
         "actor": {
@@ -674,4 +718,5 @@ def get_assigned_hours_tracking(request):
             "days": days,
         },
         "employees": employees_list,
+        "is_tl": is_tl_user,
     })
