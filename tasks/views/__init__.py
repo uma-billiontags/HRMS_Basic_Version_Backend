@@ -25,12 +25,16 @@ from .activity_views import (
 )
 from .report_views import (
     get_admin_reports, get_my_reports, get_employee_rating_trends, get_daily_timeline,
-    get_assigned_hours_tracking,
+    get_assigned_hours_tracking, get_monthly_performance_report,
 )
 
 from .recurring import (
     get_recurring_tasks, create_recurring_task, stop_recurring_task, generate_recurring_tasks, get_all_tasks,
     get_my_tasks, get_tl_tasks, get_my_recurring_tasks, toggle_recurring_date, get_assigned_recurring_tasks
+)
+
+from .notification_views import (
+    get_notifications, get_unread_notification_count, mark_notification_read, mark_all_notifications_read
 )
 
 from .utils import (health_check)

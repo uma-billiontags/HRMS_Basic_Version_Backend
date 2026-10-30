@@ -8,7 +8,8 @@ from rest_framework.response import Response
 from rest_framework.permissions import IsAuthenticated
 
 from accounts.models import Employee
-from ..models import Task, TimerSession, TaskAttachment, TaskPauseLog
+from ..models import Task, TimerSession, TaskAttachment, TaskPauseLog, Notification
+from ..notification_utils import send_notification
 from ..activity import ActivityLog, log_activity
 from django.db import transaction
 from ..activity import ActivityLog, log_activity
@@ -259,6 +260,45 @@ def submit_task(request, pk):
             from_status=from_status, to_status=task.task_status,
             details={"task_sheet_link": task.task_sheet_link, "attachment_count": len(request.FILES.getlist("attachments"))},
         )
+
+        # Notify creator/TL of submission
+        submitter_name = task.assignee_name or "Assignee"
+        notified_recipients = set()
+
+        if task.assigned_by_admin:
+            send_notification(
+                recipient=task.assigned_by_admin,
+                title="Task Submitted for Review",
+                message=f"{submitter_name} submitted task: '{task.task_name}' for review.",
+                event_type=Notification.EventType.TASK_SUBMITTED,
+                action_url="/admin/review_tasks",
+                sender_name=submitter_name,
+            )
+            notified_recipients.add(f"admin_{task.assigned_by_admin_id}")
+
+        if task.assigned_by_employee and f"emp_{task.assigned_by_employee_id}" not in notified_recipients:
+            send_notification(
+                recipient=task.assigned_by_employee,
+                title="Task Submitted for Review",
+                message=f"{submitter_name} submitted task: '{task.task_name}' for review.",
+                event_type=Notification.EventType.TASK_SUBMITTED,
+                action_url="/employee/tl_review_tasks",
+                sender_name=submitter_name,
+            )
+            notified_recipients.add(f"emp_{task.assigned_by_employee_id}")
+
+        # Also notify belonging TL if different from assigned_by
+        if task.assigned_to and task.assigned_to.belong_to_tl:
+            tl = task.assigned_to.belong_to_tl
+            if f"emp_{tl.id}" not in notified_recipients:
+                send_notification(
+                    recipient=tl,
+                    title="Team Task Submitted for Review",
+                    message=f"{submitter_name} submitted task: '{task.task_name}' for review.",
+                    event_type=Notification.EventType.TASK_SUBMITTED,
+                    action_url="/employee/tl_review_tasks",
+                    sender_name=submitter_name,
+                )
 
     return Response(TaskListSerializer(task).data)
 

@@ -93,7 +93,7 @@ class AttendanceSerializer(serializers.ModelSerializer):
             "in_time_formatted", "out_time_formatted",
             "total_hours", "production_hours", "task_work_hours", "break_hours",
             "normal_break_hours", "other_pause_hours", "untracked_hours",
-            "status", "time_doctor", "time_champ", "remarks",
+            "status", "remarks",
             "comments", "created_at", "updated_at",
         ]
 

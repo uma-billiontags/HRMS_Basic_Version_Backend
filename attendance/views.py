@@ -24,7 +24,7 @@ HALF_DAY_CUTOFF_TIME = datetime.time(13, 30, 0)
 HALF_DAY_MIN_HOURS = Decimal("4.50")
 
 
-def _is_admin(request):
+def _is_admin(request): 
     return getattr(request.user, "role", None) == "admin"
 
 
@@ -380,8 +380,6 @@ def get_my_attendance(request):
                 "other_pause_hours": None,
                 "untracked_hours": None,
                 "status": status_val,
-                "time_doctor": "",
-                "time_champ": "",
                 "remarks": "",
                 "comments": [],
             }
@@ -553,8 +551,6 @@ def admin_get_daily(request):
                 "other_pause_hours": None,
                 "untracked_hours": None,
                 "status": status_val,
-                "time_doctor": "",
-                "time_champ": "",
                 "remarks": "",
                 "comments": [],
             }
@@ -721,8 +717,6 @@ def admin_get_monthly(request):
                     "other_pause_hours": None,
                     "untracked_hours": None,
                     "status": status_val,
-                    "time_doctor": "",
-                    "time_champ": "",
                     "remarks": "",
                     "comments": [],
                 }

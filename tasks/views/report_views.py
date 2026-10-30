@@ -720,3 +720,408 @@ def get_assigned_hours_tracking(request):
         "employees": employees_list,
         "is_tl": is_tl_user,
     })
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def get_monthly_performance_report(request):
+    """
+    GET /api/tasks/reports/monthly_performance/?year=YYYY&employee_id=ID
+    Performance module:
+    - Calculates monthly task metrics (Target 200h, Assigned Hours, Working/Completed Hours,
+      Avg Rating, Reworks, On-Time %, Monthly Target Met).
+    - Closed-month restriction: ONLY shows months that have already concluded before today.
+    - Role Scoping:
+      * Admin: Can filter and view all active employees + admins.
+      * TL: Defaults to TL themselves ("My Details"), with dropdown options for their team members.
+      * Regular Employee: Strictly limited to their own record.
+    """
+    is_admin = _is_admin(request)
+    current_emp = _current_employee(request)
+    current_adm = _current_admin(request)
+
+    if not is_admin and current_emp is None:
+        return Response({"detail": "Not authorized."}, status=status.HTTP_403_FORBIDDEN)
+
+    now_date = timezone.localdate() if hasattr(timezone, "localdate") else timezone.now().date()
+    
+    # Determine year
+    req_year_str = request.query_params.get("year")
+    try:
+        req_year = int(req_year_str) if req_year_str else now_date.year
+    except ValueError:
+        req_year = now_date.year
+
+    employee_param = request.query_params.get("employee_id")
+    is_tl_user = _is_tl(request) if not is_admin else False
+
+    target_emp = None
+    target_admin = None
+    employees_dropdown = []
+
+    if is_admin:
+        all_emps = Employee.objects.filter(is_active=True).order_by("name")
+        employees_dropdown = [
+            {
+                "id": e.id,
+                "name": e.name,
+                "role": e.role,
+                "department": e.department,
+                "employee_id": e.employee_id or "",
+                "is_admin": False,
+            }
+            for e in all_emps
+        ]
+        # Admin can also inspect admin accounts if any have tasks
+        admins = Admin.objects.filter(is_active=True).order_by("name")
+        for a in admins:
+            employees_dropdown.append({
+                "id": f"admin_{a.id}",
+                "name": f"{a.name} (Admin)",
+                "role": "Admin",
+                "department": "Admin",
+                "employee_id": f"ADM-{a.id}",
+                "is_admin": True,
+            })
+
+        if employee_param:
+            if str(employee_param).startswith("admin_"):
+                adm_id = int(str(employee_param).replace("admin_", ""))
+                target_admin = admins.filter(pk=adm_id).first()
+            elif str(employee_param).isdigit():
+                target_emp = all_emps.filter(pk=int(employee_param)).first()
+        
+        # If no target chosen or not found, default to first employee or first admin
+        if not target_emp and not target_admin:
+            target_emp = all_emps.first()
+            if not target_emp and admins.exists():
+                target_admin = admins.first()
+
+    elif is_tl_user:
+        team_members = Employee.objects.filter(belong_to_tl=current_emp, is_active=True).order_by("name")
+        employees_dropdown = [
+            {
+                "id": current_emp.id,
+                "name": f"{current_emp.name} (My Details)",
+                "role": current_emp.role,
+                "department": current_emp.department,
+                "employee_id": current_emp.employee_id or "",
+                "is_admin": False,
+            }
+        ] + [
+            {
+                "id": e.id,
+                "name": e.name,
+                "role": e.role,
+                "department": e.department,
+                "employee_id": e.employee_id or "",
+                "is_admin": False,
+            }
+            for e in team_members
+        ]
+
+        target_emp = current_emp  # Default to TL's own data
+        if employee_param and str(employee_param).isdigit():
+            requested_id = int(employee_param)
+            if requested_id == current_emp.id:
+                target_emp = current_emp
+            else:
+                found = team_members.filter(pk=requested_id).first()
+                if found:
+                    target_emp = found
+
+    else:
+        # Regular employee: strictly their own data, no dropdown
+        target_emp = current_emp
+        employees_dropdown = []
+
+    # Target info for the response
+    if target_emp:
+        target_info = {
+            "id": target_emp.id,
+            "name": target_emp.name,
+            "role": target_emp.role,
+            "department": target_emp.department or "",
+            "employee_id": target_emp.employee_id or "",
+            "is_admin": False,
+        }
+    elif target_admin:
+        target_info = {
+            "id": f"admin_{target_admin.id}",
+            "name": target_admin.name,
+            "role": "Admin",
+            "department": "Admin",
+            "employee_id": f"ADM-{target_admin.id}",
+            "is_admin": True,
+        }
+    else:
+        return Response({"detail": "Target user not found."}, status=status.HTTP_404_NOT_FOUND)
+
+    TARGET_HOURS = 200.0
+    closed_months = []
+
+    # Months 1 to 12 in the requested year
+    for m in range(1, 13):
+        _, num_days = calendar.monthrange(req_year, m)
+        m_start = datetime.date(req_year, m, 1)
+        m_end = datetime.date(req_year, m, num_days)
+
+        # STRICT MONTH-END CHECK: Only show if the month has completely ended!
+        if m_end >= now_date:
+            continue
+
+        # Assigned tasks
+        if target_emp:
+            assigned_qs = Task.objects.filter(
+                assigned_to=target_emp,
+                assigned_date__range=(m_start, m_end)
+            ).exclude(task_status=Task.Status.CANCELLED)
+
+            completed_qs = Task.objects.filter(
+                assigned_to=target_emp,
+                task_status=Task.Status.COMPLETED
+            ).filter(
+                db_models.Q(reviewed_date__date__range=(m_start, m_end)) |
+                db_models.Q(reviewed_date__isnull=True, submitted_date__date__range=(m_start, m_end)) |
+                db_models.Q(reviewed_date__isnull=True, submitted_date__isnull=True, assigned_date__range=(m_start, m_end))
+            )
+
+            # Timer sessions
+            u_start = timezone.make_aware(datetime.datetime.combine(m_start, datetime.time.min))
+            u_end = timezone.make_aware(datetime.datetime.combine(m_end, datetime.time.max))
+            sessions = TimerSession.objects.filter(employee=target_emp, start_time__range=(u_start, u_end))
+        else:
+            assigned_qs = Task.objects.filter(
+                assigned_to_admin=target_admin,
+                assigned_date__range=(m_start, m_end)
+            ).exclude(task_status=Task.Status.CANCELLED)
+
+            completed_qs = Task.objects.filter(
+                assigned_to_admin=target_admin,
+                task_status=Task.Status.COMPLETED
+            ).filter(
+                db_models.Q(reviewed_date__date__range=(m_start, m_end)) |
+                db_models.Q(reviewed_date__isnull=True, submitted_date__date__range=(m_start, m_end)) |
+                db_models.Q(reviewed_date__isnull=True, submitted_date__isnull=True, assigned_date__range=(m_start, m_end))
+            )
+
+            u_start = timezone.make_aware(datetime.datetime.combine(m_start, datetime.time.min))
+            u_end = timezone.make_aware(datetime.datetime.combine(m_end, datetime.time.max))
+            sessions = TimerSession.objects.filter(admin=target_admin, start_time__range=(u_start, u_end))
+
+        assigned_hours = round(float(assigned_qs.aggregate(s=db_models.Sum("allotted_time"))["s"] or 0), 1)
+
+        # Completed hours calculation
+        completed_hours_sum = 0.0
+        for t in completed_qs:
+            dur = float(t.total_time_taken or 0)
+            if dur <= 0 and t.allotted_time:
+                dur = float(t.allotted_time)
+            completed_hours_sum += dur
+        completed_hours = round(completed_hours_sum, 1)
+
+        # Logged working hours from timer sessions
+        session_seconds = sessions.aggregate(s=db_models.Sum("duration_seconds"))["s"] or 0
+        working_hours = round(session_seconds / 3600.0, 1)
+
+        # Effective hours (maximum of completed task hours and logged working hours)
+        effective_hours = max(completed_hours, working_hours)
+
+        # Average Rating
+        rated_tasks = completed_qs.exclude(rating__isnull=True)
+        avg_rating_val = rated_tasks.aggregate(avg=db_models.Avg("rating"))["avg"]
+        avg_rating = round(float(avg_rating_val), 1) if avg_rating_val is not None else None
+
+        # Rework count
+        rework_count = int(completed_qs.aggregate(s=db_models.Sum("rework_count"))["s"] or 0)
+
+        # On-Time %
+        on_time_count = 0
+        total_eval_on_time = 0
+        for t in completed_qs:
+            if t.due_date:
+                total_eval_on_time += 1
+                if t.submitted_date:
+                    sub_date = timezone.localtime(t.submitted_date).date() if timezone.is_aware(t.submitted_date) else t.submitted_date.date()
+                    if sub_date < t.due_date:
+                        on_time_count += 1
+                    elif sub_date == t.due_date:
+                        if not t.due_time:
+                            on_time_count += 1
+                        else:
+                            sub_time = timezone.localtime(t.submitted_date).time() if timezone.is_aware(t.submitted_date) else t.submitted_date.time()
+                            if sub_time <= t.due_time:
+                                on_time_count += 1
+                else:
+                    on_time_count += 1
+            elif t.submitted_date or t.task_status == Task.Status.COMPLETED:
+                total_eval_on_time += 1
+                on_time_count += 1
+
+        on_time_pct = round((on_time_count / total_eval_on_time) * 100, 1) if total_eval_on_time > 0 else (100.0 if completed_qs.count() > 0 else None)
+
+        # Target Met Evaluation
+        if effective_hours >= 200.0:
+            target_met_status = "Fully Met"
+            target_met_code = "fully_met"
+            is_met = True
+        elif effective_hours >= 160.0:
+            target_met_status = "Partially Met"
+            target_met_code = "partially_met"
+            is_met = True
+        elif effective_hours >= 100.0:
+            target_met_status = "Below Average"
+            target_met_code = "below_average"
+            is_met = False
+        else:
+            target_met_status = "Not Met"
+            target_met_code = "not_met"
+            is_met = False
+
+        closed_months.append({
+            "month_num": m,
+            "month_name": m_start.strftime("%b %Y"),
+            "full_month_name": m_start.strftime("%B %Y"),
+            "target_hours": TARGET_HOURS,
+            "assigned_hours": assigned_hours,
+            "completed_hours": completed_hours,
+            "working_hours": working_hours,
+            "effective_hours": effective_hours,
+            "avg_rating": avg_rating,
+            "rework_count": rework_count,
+            "on_time_pct": on_time_pct,
+            "target_met_status": target_met_status,
+            "target_met_code": target_met_code,
+            "is_met": is_met,
+            "completed_tasks_count": completed_qs.count(),
+            "assigned_tasks_count": assigned_qs.count(),
+        })
+
+    # Summary aggregations
+    num_closed = len(closed_months)
+    total_assigned = round(sum(m["assigned_hours"] for m in closed_months), 1)
+    total_completed = round(sum(m["effective_hours"] for m in closed_months), 1)
+    fully_met_count = sum(1 for m in closed_months if m["target_met_code"] == "fully_met")
+    partially_met_count = sum(1 for m in closed_months if m["target_met_code"] == "partially_met")
+    below_avg_count = sum(1 for m in closed_months if m["target_met_code"] == "below_average")
+    not_met_count = sum(1 for m in closed_months if m["target_met_code"] == "not_met")
+
+    ratings_list = [m["avg_rating"] for m in closed_months if m["avg_rating"] is not None]
+    overall_avg_rating = round(sum(ratings_list) / len(ratings_list), 2) if ratings_list else None
+
+    ontime_list = [m["on_time_pct"] for m in closed_months if m["on_time_pct"] is not None]
+    overall_on_time_pct = round(sum(ontime_list) / len(ontime_list), 1) if ontime_list else None
+
+    total_reworks = sum(m["rework_count"] for m in closed_months)
+    met_target_months = fully_met_count + partially_met_count
+    consistency_pct = round((met_target_months / num_closed) * 100, 1) if num_closed > 0 else 0.0
+
+    # ── Annual Performance Calculation (50% Capacity + 50% Quality) ──────
+    presented_target_hours = TARGET_HOURS * num_closed
+    capacity_ratio = min(1.0, total_completed / presented_target_hours) if presented_target_hours > 0 else 0.0
+    capacity_score = round(capacity_ratio * 50.0, 2)
+
+    quality_ratio = min(1.0, (overall_avg_rating / 5.0)) if overall_avg_rating is not None else 0.0
+    quality_score = round(quality_ratio * 50.0, 2)
+
+    final_score = round(capacity_score + quality_score, 2)
+    score_gap = round(max(0.0, 100.0 - final_score), 2)
+
+    if final_score >= 90.0:
+        band_name = "Band A+ (Outstanding)"
+        band_code = "band_a_plus"
+        band_color = "#16a34a"
+        hike_recommendation = "18% - 22%"
+        assessment_summary = "Exceeded work capacity expectations with top-tier task quality."
+    elif final_score >= 80.0:
+        band_name = "Band A (Exceeds Expectations)"
+        band_code = "band_a"
+        band_color = "#2563eb"
+        hike_recommendation = "12% - 15%"
+        assessment_summary = "Consistently met capacity target with high quality ratings."
+    elif final_score >= 70.0:
+        band_name = "Band B (Meets Expectations)"
+        band_code = "band_b"
+        band_color = "#0284c7"
+        hike_recommendation = "7% - 10%"
+        assessment_summary = "Met standard workload and quality benchmarks."
+    elif final_score >= 60.0:
+        band_name = "Band C (Needs Improvement)"
+        band_code = "band_c"
+        band_color = "#d97706"
+        hike_recommendation = "3% - 5%"
+        assessment_summary = "Below capacity target or frequent rework required."
+    else:
+        band_name = "Band D (Unsatisfactory / PIP)"
+        band_code = "band_d"
+        band_color = "#dc2626"
+        hike_recommendation = "0% (PIP Recommended)"
+        assessment_summary = "Failed to meet minimum acceptable capacity and quality thresholds."
+
+    annual_performance = {
+        "evaluated_year": req_year,
+        "evaluated_months_count": num_closed,
+        "evaluated_period_label": f"Jan {req_year} - {closed_months[-1]['month_name']}" if closed_months else f"Year {req_year}",
+        "presented_target_hours": presented_target_hours,
+        "total_completed_hours": total_completed,
+        "capacity_percentage": round(capacity_ratio * 100, 1),
+        "capacity_score": capacity_score,
+        "capacity_max": 50.0,
+        "overall_avg_rating": overall_avg_rating,
+        "quality_percentage": round(quality_ratio * 100, 1),
+        "quality_score": quality_score,
+        "quality_max": 50.0,
+        "final_score": final_score,
+        "score_gap": score_gap,
+        "band_name": band_name,
+        "band_code": band_code,
+        "band_color": band_color,
+        "hike_recommendation": hike_recommendation,
+        "assessment_summary": assessment_summary,
+        "consistency_percentage": consistency_pct,
+        "total_reworks": total_reworks,
+        "overall_on_time_pct": overall_on_time_pct,
+        "score_pie_data": [
+            {"name": "Capacity Score (50%)", "value": capacity_score, "color": "#3b82f6", "max": 50},
+            {"name": "Quality Score (50%)", "value": quality_score, "color": "#10b981", "max": 50},
+            {"name": "Gap / Deficit", "value": score_gap, "color": "#cbd5e1", "max": 100},
+        ],
+        "target_met_pie_data": [
+            {"name": "Fully Met", "value": fully_met_count, "color": "#10b981"},
+            {"name": "Partially Met", "value": partially_met_count, "color": "#3b82f6"},
+            {"name": "Below Average", "value": below_avg_count, "color": "#f59e0b"},
+            {"name": "Not Met", "value": not_met_count, "color": "#ef4444"},
+        ]
+    }
+
+    # Available years list (e.g. current year down to past 3 years)
+    available_years = [now_date.year - i for i in range(4)]
+
+    return Response({
+        "year": req_year,
+        "available_years": available_years,
+        "current_date": now_date.strftime("%Y-%m-%d"),
+        "target_employee": target_info,
+        "employees": employees_dropdown,
+        "is_tl": is_tl_user,
+        "is_admin": is_admin,
+        "closed_months": closed_months,
+        "summary": {
+            "target_hours_per_month": TARGET_HOURS,
+            "total_closed_months": num_closed,
+            "total_target_hours": round(TARGET_HOURS * num_closed, 1),
+            "total_assigned_hours": total_assigned,
+            "total_completed_hours": total_completed,
+            "fully_met_count": fully_met_count,
+            "partially_met_count": partially_met_count,
+            "below_avg_count": below_avg_count,
+            "not_met_count": not_met_count,
+            "met_target_months": met_target_months,
+            "consistency_text": f"{met_target_months} out of {num_closed} months target met ({consistency_pct}% Consistency)" if num_closed else "No closed months evaluated yet",
+            "consistency_percentage": consistency_pct,
+            "overall_avg_rating": overall_avg_rating,
+            "overall_on_time_pct": overall_on_time_pct,
+            "total_reworks": total_reworks,
+        },
+        "annual_performance": annual_performance,
+    })

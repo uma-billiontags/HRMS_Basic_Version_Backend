@@ -16,6 +16,9 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 
 from .models import EmployeeRequest
+from tasks.notification_utils import send_notification
+from tasks.models import Notification
+from accounts.models import Admin
 
 
 def _parse_and_validate_emails(raw_val, field_name="recipient email", required=False):
@@ -229,6 +232,29 @@ def create_request(request):
     except Exception as exc:
         return Response({"detail": f"Request email could not be sent: {exc}"}, status=status.HTTP_502_BAD_GATEWAY)
 
+    # In-app notifications
+    sender_name = request.user.name or "Employee"
+    req_type = item.get_request_type_display() if hasattr(item, "get_request_type_display") else "Request"
+    for adm in Admin.objects.filter(is_active=True):
+        send_notification(
+            recipient=adm,
+            title="New Employee Request",
+            message=f"{sender_name} submitted a new {req_type}: '{item.subject}'.",
+            event_type=Notification.EventType.REQUEST_CREATED,
+            action_url="/admin/requests",
+            sender_name=sender_name,
+        )
+
+    if hasattr(request.user, "instance") and getattr(request.user.instance, "belong_to_tl", None):
+        send_notification(
+            recipient=request.user.instance.belong_to_tl,
+            title="Team Member Request",
+            message=f"{sender_name} submitted a new {req_type}: '{item.subject}'.",
+            event_type=Notification.EventType.REQUEST_CREATED,
+            action_url="/employee/requests",
+            sender_name=sender_name,
+        )
+
     return Response(_serialize(item), status=status.HTTP_201_CREATED)
 
 
@@ -371,6 +397,23 @@ def admin_decide_request(request, pk):
         item.save()
 
     _send_decision_email(item, decision, decision_note)
+
+    # In-app notification to requester
+    decider_name = request.user.name if hasattr(request.user, "name") else "Management"
+    evt_type = (
+        Notification.EventType.REQUEST_REJECTED
+        if decision == "rejected"
+        else Notification.EventType.REQUEST_APPROVED
+    )
+    send_notification(
+        recipient=item.employee,
+        title=f"Request {decision.capitalize()}",
+        message=f"Your request '{item.subject}' was {decision} by {decider_name}." + (f" Note: {decision_note}" if decision_note else ""),
+        event_type=evt_type,
+        action_url="/employee/requests",
+        sender_name=decider_name,
+    )
+
     return Response(_serialize(item))
 
 
@@ -398,6 +441,19 @@ def email_decision(request, token, decision):
             item.save(update_fields=["status", "decision_note", "decided_at"])
 
         _send_decision_email(item, decision, decision_note)
+        evt_type = (
+            Notification.EventType.REQUEST_REJECTED
+            if decision == "rejected"
+            else Notification.EventType.REQUEST_APPROVED
+        )
+        send_notification(
+            recipient=item.employee,
+            title=f"Request {decision.capitalize()}",
+            message=f"Your request '{item.subject}' was {decision} via email." + (f" Note: {decision_note}" if decision_note else ""),
+            event_type=evt_type,
+            action_url="/employee/requests",
+            sender_name="Management",
+        )
         return render(request, "leave_requests/decision_result.html", {"result": f"Request {decision} successfully.", "success": True})
     if request.method != "GET":
         return HttpResponse(status=405)

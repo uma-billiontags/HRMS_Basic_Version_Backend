@@ -44,8 +44,6 @@ class Attendance(models.Model):
     status = models.CharField(
         max_length=30, choices=Status.choices, default=Status.ABSENT, db_index=True
     )
-    time_doctor = models.CharField(max_length=50, blank=True, default="")
-    time_champ = models.CharField(max_length=50, blank=True, default="")
     remarks = models.TextField(blank=True, default="")
 
     created_at = models.DateTimeField(auto_now_add=True)

@@ -298,6 +298,7 @@ class TaskAttachment(models.Model):
 
     class Meta:
         ordering = ["uploaded_at"]
+        
 class TimerSession(models.Model):
     task = models.ForeignKey(Task, on_delete=models.CASCADE, related_name="sessions")
     employee = models.ForeignKey(Employee, on_delete=models.PROTECT, related_name="timer_sessions", null=True, blank=True)
@@ -469,3 +470,44 @@ class RecurringTaskDefinition(models.Model):
         if self.assigned_to_admin_id:
             return "admin"
         return None
+
+
+class Notification(models.Model):
+    class EventType(models.TextChoices):
+        TASK_ASSIGNED = "task_assigned", "Task Assigned"
+        TASK_SUBMITTED = "task_submitted", "Task Submitted"
+        TASK_REWORK = "task_rework", "Task Rework Needed"
+        TASK_APPROVED = "task_approved", "Task Approved"
+        REQUEST_CREATED = "request_created", "Request Created"
+        REQUEST_DECIDED = "request_decided", "Request Decided"
+        REQUEST_APPROVED = "request_approved", "Request Approved"
+        REQUEST_REJECTED = "request_rejected", "Request Rejected"
+        DEADLINE_REMINDER = "deadline_reminder", "Deadline Reminder"
+        GENERAL = "general", "General"
+
+    recipient_employee = models.ForeignKey(
+        Employee, null=True, blank=True, on_delete=models.CASCADE, related_name="notifications"
+    )
+    recipient_admin = models.ForeignKey(
+        Admin, null=True, blank=True, on_delete=models.CASCADE, related_name="notifications_as_admin"
+    )
+
+    sender_name = models.CharField(max_length=150, blank=True, default="")
+    title = models.CharField(max_length=200)
+    message = models.TextField()
+    event_type = models.CharField(max_length=30, choices=EventType.choices, default=EventType.GENERAL)
+
+    action_url = models.CharField(max_length=255, blank=True, default="")
+    is_read = models.BooleanField(default=False)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ["-created_at"]
+
+    def __str__(self):
+        recipient = (
+            self.recipient_employee.name
+            if self.recipient_employee
+            else (self.recipient_admin.name if self.recipient_admin else "Unknown")
+        )
+        return f"[{self.event_type}] to {recipient}: {self.title}"

@@ -5,7 +5,7 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny, IsAuthenticated
 
-from .serializers import LoginSerializer, AdminSerializer, EmployeeSerializer, EmployeeCredentialSerializer, EmployeeWriteSerializer
+from .serializers import LoginSerializer, AdminCredentialSerializer, AdminWriteSerializer,  AdminSerializer, EmployeeSerializer, EmployeeCredentialSerializer, EmployeeWriteSerializer
 from .models import AuthToken, Employee, Admin
 from django.shortcuts import get_object_or_404
 from django.db.models.deletion import ProtectedError
@@ -126,16 +126,12 @@ def delete_employee_credential(request, pk):
     name = employee.name
     try:
         employee.delete()
+        return Response({"detail": f'"{name}" deleted.'}, status=status.HTTP_200_OK)
     except ProtectedError:
         return Response(
             {"detail": "This employee has tasks or timer history and can't be deleted. Consider deactivating instead."},
             status=status.HTTP_409_CONFLICT,
         )
-
-# accounts/views.py — add these
-
-from .serializers import AdminCredentialSerializer, AdminWriteSerializer  # add to existing import
-
 
 @api_view(["GET"])
 @permission_classes([IsAuthenticated])

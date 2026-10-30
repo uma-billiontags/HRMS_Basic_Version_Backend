@@ -10,7 +10,8 @@ from django.db import transaction
 from django.db.models import Q
 from ..activity import ActivityLog, log_activity
 from django.utils import timezone
-from ..models import Task
+from ..models import Task, Notification
+from ..notification_utils import send_notification
 from ..serializers import ( TaskListSerializer, ReviewApproveSerializer, ReviewReworkSerializer )
 
 
@@ -125,6 +126,19 @@ def approve_task(request, pk):
             details={"quality": task.quality_of_task, "rating": task.rating, "remarks": task.admin_remarks},
         )
 
+        # Notify assignee that task was approved
+        reviewer_name = request.user.instance.name if hasattr(request.user, "instance") and request.user.instance else "Reviewer"
+        assignee = task.assigned_to if task.assigned_to else task.assigned_to_admin
+        url = "/employee/completed_tasks" if task.assigned_to else "/admin/my_completed_tasks"
+        send_notification(
+            recipient=assignee,
+            title="Task Approved",
+            message=f"Your task '{task.task_name}' was approved by {reviewer_name} with rating {task.rating}/5!",
+            event_type=Notification.EventType.TASK_APPROVED,
+            action_url=url,
+            sender_name=reviewer_name,
+        )
+
     return Response(TaskListSerializer(task).data)
 
 @api_view(["POST"])
@@ -154,6 +168,19 @@ def request_rework(request, pk):
             task, request.user, ActivityLog.Action.REWORK_REQUESTED,
             from_status="under_review", to_status="rework_needed",
             details={"admin_remarks": task.admin_remarks, "rework_count": task.rework_count},
+        )
+
+        # Notify assignee that rework is requested
+        reviewer_name = request.user.instance.name if hasattr(request.user, "instance") and request.user.instance else "Reviewer"
+        assignee = task.assigned_to if task.assigned_to else task.assigned_to_admin
+        url = "/employee/all_tasks" if task.assigned_to else "/admin/my_tasks"
+        send_notification(
+            recipient=assignee,
+            title="Task Rework Requested",
+            message=f"Rework requested for '{task.task_name}' by {reviewer_name}. Reason: {task.admin_remarks or 'Revision needed.'}",
+            event_type=Notification.EventType.TASK_REWORK,
+            action_url=url,
+            sender_name=reviewer_name,
         )
 
     return Response(TaskListSerializer(task).data)

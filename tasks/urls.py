@@ -61,6 +61,7 @@ urlpatterns = [
     path("reports/employee/", views.get_my_reports, name="reports-employee"),
     path("reports/daily_timeline/", views.get_daily_timeline, name="reports-daily-timeline"),
     path("reports/assigned_hours_tracking/", views.get_assigned_hours_tracking, name="reports-assigned-hours-tracking"),
+    path("reports/monthly_performance/", views.get_monthly_performance_report, name="reports-monthly-performance"),
 
     # ── Recurring (daily) tasks ──────────────────────────────────────────
     path("recurring/", views.get_recurring_tasks, name="recurring-list"),
@@ -74,6 +75,12 @@ urlpatterns = [
     
     path("get_all_admins/", views.get_all_admins, name="task-admins"),
     path("admin_my_tasks/", views.get_admin_my_tasks, name="admin-my-tasks"),
+
+    # ── Notifications ────────────────────────────────────────────────────
+    path("notifications/", views.get_notifications, name="notifications-list"),
+    path("notifications/unread_count/", views.get_unread_notification_count, name="notifications-unread-count"),
+    path("notifications/<int:pk>/mark_read/", views.mark_notification_read, name="notifications-mark-read"),
+    path("notifications/mark_all_read/", views.mark_all_notifications_read, name="notifications-mark-all-read"),
     
     path("health/", views.health_check, name="health-check"),
 ]

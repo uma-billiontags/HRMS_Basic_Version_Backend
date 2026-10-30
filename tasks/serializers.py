@@ -1,7 +1,7 @@
 # tasks/serializers.py
 
 from rest_framework import serializers
-from .models import Task, TimerSession, TaskMaster, RecurringTaskDefinition, TaskAttachment, CorrectionRequest
+from .models import Task, TimerSession, TaskMaster, RecurringTaskDefinition, TaskAttachment, CorrectionRequest, Notification
 from django.core.validators import URLValidator
 from django.core.exceptions import ValidationError as DjangoValidationError
 
@@ -359,3 +359,12 @@ class RecurringTaskDefinitionCreateSerializer(serializers.ModelSerializer):
         elif self.validated_data.get("assigned_to"):
             self.validated_data["assigned_to_admin"] = None
         return super().save(**kwargs)
+
+
+class NotificationSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Notification
+        fields = [
+            "id", "sender_name", "title", "message", "event_type",
+            "action_url", "is_read", "created_at"
+        ]
